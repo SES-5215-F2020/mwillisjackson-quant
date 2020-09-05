@@ -1,0 +1,84 @@
+---
+title: "Assignment 1"
+author: "Megan Willis-Jackson"
+date: "9/4/2020"
+output: html_document
+---
+
+
+#Access Census Data
+```{r load libraries}
+library(tidycensus)
+library(tidyverse)
+```
+
+##Finding Variables
+###Example 1: Individual
+```{r}
+person_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, 
+           var_label, data_type, level) %>%
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+###Example 2: Household
+```{r}
+hh_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, 
+           var_label, data_type, level) %>%
+  filter(level == "housing", year == 2018, survey == "acs1")
+```
+###Example 3: Area
+```{r}
+area_vars_2018 <- load_variables(2018,"acs1")
+```
+###Example 4: Area, 2010 census
+```{r}
+area_vars_2010 <- load_variables(2010,"sf1")
+```
+##Explore Variables
+```{r}
+census_variables_2018 <- unique(area_vars_2018$concept)
+view(census_variables_2018)
+```
+#Selecting Variables
+1. Means of Transportation to Work: Categorical. Code: JWTR
+2. Travel time to work: Continuous. Code: JWMNP
+3. Household income: Continuous. Code: HINCP
+4. Educational attainment: Categorical. Code: SCHL
+5. Monthly rent: Continuous. Code: RNTP
+6. Monthly first mortgage: Continuous. Code: MRGP
+7. Monthly second/junior mortgage: Continuous. Code: SMP
+
+##Compile Selected Variables into Dataset
+```{r}
+person_data <- get_pums(variables = c("JWTR", 
+                                      "JWMNP", 
+                                      "HINCP", 
+                                      "SCHL", 
+                                      "RNTP",
+                                      "MRGP",
+                                      "SMP"),
+                        state = "MA", 
+                        year = 2018, 
+                        survey = "acs1",
+                        recode = TRUE) %>%
+  filter(JWMNP > 0) %>%
+  select(JWTR_label, SCHL_label, JWMNP, HINCP, RNTP, MRGP, SMP)
+
+colnames(person_data)<- c("transpo_mode","highest_education","travel_time","household_income","monthly_rent","monthly_first_mortgage","monthly_second_mortgage")
+
+person_data$monthly_housing_total<- person_data$monthly_rent + person_data$monthly_first_mortgage + person_data$monthly_second_mortgage
+
+person_data <- person_data[-c(5:7)]
+```
+
+#Save csv
+```{r}
+write.csv(person_data,"people.csv")
+
+
+
+
+
+
+
