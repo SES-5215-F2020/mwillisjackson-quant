@@ -75,6 +75,7 @@ person_data <- person_data[-c(5:7)]
 #Save csv
 ```{r}
 write.csv(person_data,"people.csv")
+```
 
 
 
