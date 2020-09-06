@@ -7,44 +7,44 @@ output:
     toc: yes
     theme: cerulean
 ---
-#Summary
+# Summary
 The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), and monthly cost of housing (continuous). There are 33,441 total observations in this dataset. 
 
-#Access Census Data
+# Access Census Data
 ```{r load libraries}
 library(tidycensus)
 library(tidyverse)
 ```
 
-##Finding Variables
-###Example 1: Individual
+## Finding Variables
+### Example 1: Individual
 ```{r}
 person_vars_2018 <- pums_variables %>%
   distinct(year, survey, var_code, 
            var_label, data_type, level) %>%
   filter(level == "person", year == 2018, survey == "acs1")
 ```
-###Example 2: Household
+### Example 2: Household
 ```{r}
 hh_vars_2018 <- pums_variables %>%
   distinct(year, survey, var_code, 
            var_label, data_type, level) %>%
   filter(level == "housing", year == 2018, survey == "acs1")
 ```
-###Example 3: Area
+### Example 3: Area
 ```{r}
 area_vars_2018 <- load_variables(2018,"acs1")
 ```
-###Example 4: Area, 2010 census
+### Example 4: Area, 2010 census
 ```{r}
 area_vars_2010 <- load_variables(2010,"sf1")
 ```
-##Explore Variables
+## Explore Variables
 ```{r}
 census_variables_2018 <- unique(area_vars_2018$concept)
 view(census_variables_2018)
 ```
-#Selecting Variables
+# Selecting Variables
 1. Means of Transportation to Work: Categorical. Code: JWTR
 2. Travel time to work: Continuous. Code: JWMNP
 3. Household income: Continuous. Code: HINCP
@@ -53,7 +53,7 @@ view(census_variables_2018)
 6. Monthly first mortgage: Continuous. Code: MRGP
 7. Monthly second/junior mortgage: Continuous. Code: SMP
 
-##Compile Selected Variables into Dataset
+## Compile Selected Variables into Dataset
 ```{r compile variables}
 person_data <- get_pums(variables = c("JWTR", 
                                       "JWMNP", 
@@ -80,12 +80,12 @@ person_data$monthly_housing_total<- person_data$monthly_rent + person_data$month
 person_data <- person_data[-c(5:7)]
 ```
 
-#Save csv
+# Save csv
 ```{r save csv}
 write.csv(person_data,"people.csv")
 ```
 
-#Print example rows of dataset
+# Print example rows of dataset
 ```{r print rows}
 print(person_data[700:709,1:5])
 ```
