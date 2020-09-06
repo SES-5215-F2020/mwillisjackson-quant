@@ -2,9 +2,13 @@
 title: "Assignment 1"
 author: "Megan Willis-Jackson"
 date: "9/4/2020"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
+    theme: cerulean
 ---
-
+#Summary
+The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), and monthly cost of housing (continuous). There are 33,441 total observations in this dataset. 
 
 #Access Census Data
 ```{r load libraries}
@@ -81,7 +85,10 @@ person_data <- person_data[-c(5:7)]
 write.csv(person_data,"people.csv")
 ```
 
-
+#Print example rows of dataset
+```{r print rows}
+print(person_data[700:709,1:5])
+```
 
 
 
