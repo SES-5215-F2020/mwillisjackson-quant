@@ -8,10 +8,10 @@ output:
     theme: cerulean
 ---
 # Summary
-The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), and monthly cost of housing (continuous). There are 33,441 total observations in this dataset. 
+The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes, an income greater than $0, and pay more than $0 in monthly rent or mortgage. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), and monthly cost of housing (continuous). There are 27,227 total observations in this dataset. 
 
 # Access Census Data
-```{r load libraries}
+```{r load libraries, message=FALSE}
 library(tidycensus)
 library(tidyverse)
 ```
@@ -66,7 +66,7 @@ person_data <- get_pums(variables = c("JWTR",
                         year = 2018, 
                         survey = "acs1",
                         recode = TRUE) %>%
-  filter(JWMNP > 0) %>%
+  filter(JWMNP > 0, RNTP > 0| MRGP > 0, HINCP > 0) %>%
   select(JWTR_label, SCHL_label, JWMNP, HINCP, RNTP, MRGP, SMP)
 
 ```
