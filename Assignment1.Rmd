@@ -47,11 +47,7 @@ area_vars_2018 <- load_variables(2018,"acs1")
 ```{r}
 area_vars_2010 <- load_variables(2010,"sf1")
 ```
-## Explore Variables
-```{r}
-census_variables_2018 <- unique(area_vars_2018$concept)
-view(census_variables_2018)
-```
+
 # Selecting Variables
 1. Means of Transportation to Work: Categorical. Code: JWTR
 2. Travel time to work: Continuous. Code: JWMNP

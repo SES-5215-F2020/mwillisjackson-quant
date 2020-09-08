@@ -380,7 +380,6 @@ summary {
 <li><a href="#example-3-area">Example 3: Area</a></li>
 <li><a href="#example-4-area-2010-census">Example 4: Area, 2010 census</a></li>
 </ul></li>
-<li><a href="#explore-variables">Explore Variables</a></li>
 </ul></li>
 <li><a href="#selecting-variables">Selecting Variables</a><ul>
 <li><a href="#compile-selected-variables-into-dataset">Compile Selected Variables into Dataset</a></li>
@@ -432,11 +431,6 @@ library(tidyverse)</code></pre>
 <h3>Example 4: Area, 2010 census</h3>
 <pre class="r"><code>area_vars_2010 &lt;- load_variables(2010,&quot;sf1&quot;)</code></pre>
 </div>
-</div>
-<div id="explore-variables" class="section level2">
-<h2>Explore Variables</h2>
-<pre class="r"><code>census_variables_2018 &lt;- unique(area_vars_2018$concept)
-view(census_variables_2018)</code></pre>
 </div>
 </div>
 <div id="selecting-variables" class="section level1">
