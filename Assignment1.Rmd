@@ -6,9 +6,17 @@ output:
   html_document: 
     toc: yes
     theme: cerulean
+    fig_width: 10
 ---
 # Summary
-The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes, an income greater than $0, and pay more than $0 in monthly rent or mortgage. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), and monthly cost of housing (continuous). There are 27,227 total observations in this dataset. 
+The unit of analysis is at the individual person level, although some variables (household income, monthly rent/mortgage) are reported at the household level. The dataset includes all MA residents who have a commute to work longer than 0 minutes, an income greater than $0, and pay more than $0 in monthly rent or mortgage. The dataset includes the individuals' modes of transportation to work (categorical), commute time (continuous), highest level of education attained (categorical), household income (continuous), monthly cost of housing (continuous), and public use microdata area (categorical). There are 27,227 total observations in this dataset.
+
+## Potential Research Questions
+1. How are housing prices affected by the length of an individual's commute?
+2. Do housing prices have an effect on an individual's mode of commute? 
+3. Does the percentage of the household income paid for housing correlate with the length of commute?
+4. Is there a correlation between the length of an individual's commute and their mode of commute?
+5. Does the PUMA in which an individual is included correlate with the individual's mode and length of commute?
 
 # Access Census Data
 ```{r load libraries, message=FALSE}
@@ -52,32 +60,38 @@ view(census_variables_2018)
 5. Monthly rent: Continuous. Code: RNTP
 6. Monthly first mortgage: Continuous. Code: MRGP
 7. Monthly second/junior mortgage: Continuous. Code: SMP
+8. Public use microdata area: Categorical (although the PUMA is presented as a number, it does not make sense to analyze each PUMA as greater than or less than another. The number in this variable is just a clean method of categorizing the data). Code: PUMA
 
 ## Compile Selected Variables into Dataset
-```{r compile variables}
+```{r compile variables, results='hide'}
 person_data <- get_pums(variables = c("JWTR", 
                                       "JWMNP", 
                                       "HINCP", 
                                       "SCHL", 
                                       "RNTP",
                                       "MRGP",
-                                      "SMP"),
+                                      "SMP",
+                                      "PUMA"),
                         state = "MA", 
                         year = 2018, 
                         survey = "acs1",
                         recode = TRUE) %>%
+  #filtering to individuals who commute to work, have an income, and who pay more than $0 in monthly housing costs
   filter(JWMNP > 0, RNTP > 0| MRGP > 0, HINCP > 0) %>%
-  select(JWTR_label, SCHL_label, JWMNP, HINCP, RNTP, MRGP, SMP)
+  select(JWTR_label, SCHL_label, JWMNP, HINCP, RNTP, MRGP, SMP, PUMA)
 
 ```
 ```{r rename variables}
-colnames(person_data)<- c("transpo_mode","highest_education","travel_time","household_income","monthly_rent","monthly_first_mortgage","monthly_second_mortgage")
+colnames(person_data)<- c("transpo_mode","highest_education","travel_time","household_income","monthly_rent","monthly_first_mortgage","monthly_second_mortgage","PUMA")
 ```
+
+The census data includes information for a household's monthly rent and monthly mortgage, but there is no variable that combines the two. Because I am interested in the monthly housing costs and not the distinction between owning and renting, I combine the relevant variables below.
 
 ```{r create monthly housing cost}
 person_data$monthly_housing_total<- person_data$monthly_rent + person_data$monthly_first_mortgage + person_data$monthly_second_mortgage
 
 person_data <- person_data[-c(5:7)]
+person_data <- person_data[,c(1:4,6,5)]
 ```
 
 # Save csv
@@ -87,7 +101,7 @@ write.csv(person_data,"people.csv")
 
 # Print example rows of dataset
 ```{r print rows}
-print(person_data[700:709,1:5])
+person_data[1:9,1:6]
 ```
 
 
