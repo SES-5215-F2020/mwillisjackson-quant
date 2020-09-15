@@ -1,0 +1,132 @@
+---
+title: "Assignment 2"
+author: "Megan Willis-Jackson"
+date: "9/5/2020"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+# Distributions and Proportions
+## Continuous Variables
+```{r create table, message=FALSE, results='hide'}
+library(readr)
+library(ggplot2)
+library(tidycensus)
+library(tidyverse)
+person_data <- read_csv("people.csv")[,2:6]
+variables<- data.frame(c("Travel_Time","Household_Income","Housing_Cost"))
+mean<- data.frame(c(mean(person_data$travel_time), mean(person_data$household_income), mean(person_data$monthly_housing_total)))
+standard_deviation<- data.frame(c(sd(person_data$travel_time),sd(person_data$household_income),sd(person_data$monthly_housing_total)))
+low_CI_95<- data.frame(c(1,1,1))
+high_CI_95<- data.frame(c(1,1,1))
+IQ_Range<- data.frame(c(IQR(person_data$travel_time),IQR(person_data$household_income),IQR(person_data$monthly_housing_total)))
+summary_stats<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range))
+colnames(summary_stats)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range")
+rownames(summary_stats)<- summary_stats$variable
+summary_stats<- summary_stats[,2:6]
+```
+### Look at distribution of cont. variables
+```{r histograms}
+hist(person_data$travel_time,
+     freq = 50, 
+     main = "Travel Time Histogram", 
+     xlab = "Travel Time (minutes)")
+hist(person_data$household_income,
+     freq = 500000,
+     main = "Household Income Histogram",
+     xlab = "Household Income") 
+hist(person_data$monthly_housing_total,
+     main = "Monthly Housing Costs Histogram",
+     xlab = "Monthly Housing Costs")
+```
+
+Each of the continuous variables are skewed right, so they are not normal and require a T confidence interval
+
+```{r confidence intervals}
+summary_stats[1,3:4]<- t.test(person_data$travel_time,conf.level = .95)[["conf.int"]]
+summary_stats[2,3:4]<- t.test(person_data$household_income,conf.level = .95)[["conf.int"]]
+summary_stats[3,3:4]<- t.test(person_data$monthly_housing_total,conf.level = .95)[["conf.int"]]
+
+print(summary_stats)
+```
+## Categorical Variables
+```{r categorical}
+attach(person_data)
+transpo <- unique(transpo_mode)
+transpo
+
+car_truck_van <- t.test(transpo_mode == transpo[1])
+subway <- t.test(transpo_mode == transpo[2])
+walk <- t.test(transpo_mode == transpo[3])
+railroad <- t.test(transpo_mode == transpo[4])
+bus <- t.test(transpo_mode == transpo[5])
+streetcar <- t.test(transpo_mode == transpo[6])
+bicycle <- t.test(transpo_mode == transpo[7])
+other <- t.test(transpo_mode == transpo[8])
+taxi <- t.test(transpo_mode == transpo[9])
+ferry <- t.test(transpo_mode == transpo[10])
+motorcycle <- t.test(transpo_mode == transpo[11])
+
+shares <- tibble(transpo = c("Car, Truck, or Van",
+                             "Subway or elevated train",
+                             "Walking",
+                             "Railroad",
+                             "Bus",
+                             "Streetcar or trolley",
+                             "Bicycle",
+                             "Other mode",
+                             "Taxi",
+                             "Ferryboat",
+                             "Motorcycle"),
+                 `Share` = c(car_truck_van$estimate,
+                             subway$estimate,
+                             walk$estimate,
+                             railroad$estimate,
+                             bus$estimate,
+                             streetcar$estimate,
+                             bicycle$estimate,
+                             other$estimate,
+                             taxi$estimate,
+                             ferry$estimate,
+                             motorcycle$estimate),
+                 Low = c(car_truck_van$conf.int[1],
+                             subway$conf.int[1],
+                             walk$conf.int[1],
+                             railroad$conf.int[1],
+                             bus$conf.int[1],
+                             streetcar$conf.int[1],
+                             bicycle$conf.int[1],
+                             other$conf.int[1],
+                             taxi$conf.int[1],
+                             ferry$conf.int[1],
+                             motorcycle$conf.int[1]),
+                 High = c(car_truck_van$conf.int[2],
+                             subway$conf.int[2],
+                             walk$conf.int[2],
+                             railroad$conf.int[2],
+                             bus$conf.int[2],
+                             streetcar$conf.int[2],
+                             bicycle$conf.int[2],
+                             other$conf.int[2],
+                             taxi$conf.int[2],
+                             ferry$conf.int[2],
+                             motorcycle$conf.int[2]))
+
+knitr::kable(shares, caption = "Proportions and 95-percent confidence intervals")
+
+```
+```{r visualize categorical variables}
+ggplot(shares,
+       aes(x = transpo, y = Share, ymin = Low, ymax = High)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(width = 0.5) +
+  theme_classic() +
+  scale_x_discrete(name = "Commute Mode of Transportation") +
+  scale_y_continuous(name = "Percent of Population", labels = c("0%", "20%", "40%", "60%", "80%"))
+
+
+
+
+
+```
