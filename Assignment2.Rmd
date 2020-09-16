@@ -1,14 +1,14 @@
 ---
-title: "Assignment 2"
+title: "Assignment 2 - Distributions and Proportions"
 author: "Megan Willis-Jackson"
-date: "9/5/2020"
+date: "9/16/2020"
 output: 
   html_document: 
     theme: cerulean
+    toc: yes
 ---
 
-# Distributions and Proportions
-## Continuous Variables
+# Continuous Variables
 ```{r create table, message=FALSE, results='hide'}
 library(readr)
 library(ggplot2)
@@ -21,36 +21,125 @@ standard_deviation<- data.frame(c(sd(person_data$travel_time),sd(person_data$hou
 low_CI_95<- data.frame(c(1,1,1))
 high_CI_95<- data.frame(c(1,1,1))
 IQ_Range<- data.frame(c(IQR(person_data$travel_time),IQR(person_data$household_income),IQR(person_data$monthly_housing_total)))
-summary_stats<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range))
-colnames(summary_stats)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range")
-rownames(summary_stats)<- summary_stats$variable
-summary_stats<- summary_stats[,2:6]
-```
-### Look at distribution of cont. variables
-```{r histograms}
-hist(person_data$travel_time,
-     freq = 50, 
-     main = "Travel Time Histogram", 
-     xlab = "Travel Time (minutes)")
-hist(person_data$household_income,
-     freq = 500000,
-     main = "Household Income Histogram",
-     xlab = "Household Income") 
-hist(person_data$monthly_housing_total,
-     main = "Monthly Housing Costs Histogram",
-     xlab = "Monthly Housing Costs")
+summary_stats_contvar<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range))
+colnames(summary_stats_contvar)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range")
+rownames(summary_stats_contvar)<- summary_stats_contvar$variable
+summary_stats_contvar<- summary_stats_contvar[,2:6]
 ```
 
-Each of the continuous variables are skewed right, so they are not normal and require a T confidence interval
+```{r perform t tests for continuous variables}
+summary_stats_contvar[1,3:4]<- t.test(person_data$travel_time,conf.level = .95)[["conf.int"]]
+summary_stats_contvar[2,3:4]<- t.test(person_data$household_income,conf.level = .95)[["conf.int"]]
+summary_stats_contvar[3,3:4]<- t.test(person_data$monthly_housing_total,conf.level = .95)[["conf.int"]]
 
-```{r confidence intervals}
-summary_stats[1,3:4]<- t.test(person_data$travel_time,conf.level = .95)[["conf.int"]]
-summary_stats[2,3:4]<- t.test(person_data$household_income,conf.level = .95)[["conf.int"]]
-summary_stats[3,3:4]<- t.test(person_data$monthly_housing_total,conf.level = .95)[["conf.int"]]
+knitr::kable(summary_stats_contvar, caption = "Summary Statistics for the Continuous Variables")
 
-print(summary_stats)
+summary_stats_contvar
 ```
-## Categorical Variables
+
+## Travel Time
+
+```{r histograms - travel time}
+paste("The average time it takes an MA resident in our sample to travel to work is about", prettyNum(summary_stats_contvar[1,1], digits = 2), "minutes. Half of the MA residents who commute have a commute longer than", prettyNum(median(person_data$travel_time, digits = 2)), "minutes, and half of them have a commute shorter than that. We can say with 95% confidence that the true mean travel time for the population of MA commuters is between", prettyNum(summary_stats_contvar[1,3], digits = 3), "and", prettyNum(summary_stats_contvar[1,4], digits = 3), "minutes. The distribution appears to be skewed right, which makes sense as people cannot have a negative commute time but commutes can sometimes be several hours long. There is a spike right around 60 minutes and another at 90 minutes, which also makes sense because for people with commutes around 55 or 65 minutes, when asked they would likely say 1 hour; same with 90 minutes - anything around that length and people would likely say an hour and a half.")
+
+ggplot(person_data,
+       aes(x = travel_time)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Travel Time (minutes)") +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 50, y = 4000, size = 4,
+           label = paste("Population mean (95% confidence):",
+                         prettyNum(summary_stats_contvar[1,3], digits = 3),
+                         "to",
+                         prettyNum(summary_stats_contvar[1,4], digits = 3),
+                         "minutes",
+                         "\nSample mean:",
+                         prettyNum(summary_stats_contvar[1,1], digits = 3),
+                         "minutes",
+                         "\nSample median:",
+                         prettyNum(median(person_data$travel_time), digits = 3),
+                         "minutes",
+                         "\nSample standard deviation:",
+                         prettyNum(summary_stats_contvar[1,2], digits = 3),
+                         "minutes",
+                         "\nSample interquartile range:",
+                         prettyNum(quantile(person_data$travel_time)["25%"], digits = 4),
+                         "to",
+                         prettyNum(quantile(person_data$travel_time)["75%"], digits = 4),
+                         "minutes"),
+           hjust = 0, vjust = 1)
+
+```
+
+
+## Household Income
+
+```{r histograms - household income}
+paste("The average household income earned per month in our sample of MA residents is approximately $", prettyNum(summary_stats_contvar[2,1], digits = 2, big.mark = ","), ". Half of the MA residents are in households that earn more than $", prettyNum(median(person_data$household_income), digits = 2, big.mark = ","), "per month, and half of them are in households that earn less than that. We can say with 95% confidence that the true mean household income per month for the population of MA residents is between $", prettyNum(summary_stats_contvar[2,3], digits = 3, big.mark = ","), "and $", prettyNum(summary_stats_contvar[2,4], digits = 3, big.mark = ","), ". The distribution appears to be skewed right. This makes sense because the sample of MA residents here excludes anyone who does not have a positive income, whereas there is no cap on the highest income included.")
+
+ggplot(person_data,
+       aes(x = household_income)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Household Income",
+                     breaks = seq(0,1500000,by = 250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M","$1.5M")) +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 500000, y = 8000, size = 4,
+           label = paste("Population mean (95% confidence): $",
+                         prettyNum(summary_stats_contvar[2,3], digits = 3, big.mark = ","),
+                         "to $",
+                         prettyNum(summary_stats_contvar[2,4], digits = 3, big.mark = ","),
+                         "\nSample mean: $",
+                         prettyNum(summary_stats_contvar[2,1], digits = 3, big.mark = ","),
+                         "\nSample median: $",
+                         prettyNum(median(person_data$household_income), digits = 3, big.mark = ","),
+                         "\nSample standard deviation: $",
+                         prettyNum(summary_stats_contvar[2,2], digits = 3, big.mark = ","),
+                         "\nSample interquartile range: $",
+                         prettyNum(quantile(person_data$household_income)["25%"], digits = 4, big.mark = ","),
+                         "to $",
+                         prettyNum(quantile(person_data$household_income)["75%"], digits = 4, big.mark = ",")),
+           hjust = 0, vjust = 1)
+
+```
+
+## Household Cost
+
+```{r histograms - household Cost}
+paste("The average cost of housing per month in our sample of MA residents is approximately $", prettyNum(summary_stats_contvar[3,1], digits = 2, big.mark = ","), ". Half of the MA residents are in households that cost more than $", prettyNum(median(person_data$monthly_housing_total), digits = 2, big.mark = ","), "per month, and half of them are in households that cost less than that. We can say with 95% confidence that the true mean cost of housing per month for the population of MA residents is between $", prettyNum(summary_stats_contvar[3,3], digits = 3, big.mark = ","), "and $", prettyNum(summary_stats_contvar[3,4], digits = 3, big.mark = ","), ". The distribution appears to be skewed slightly right. Of the three continuous variables in this dataset, this one is the closests to having a normal distribution. However, this dataset only includes residents who pay more than $0 in monthly housing costs.")
+
+ggplot(person_data,
+       aes(x = monthly_housing_total)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Household Income",
+                     breaks = seq(0,8000,by = 1000),
+                     labels = c("$0","$1,000","$2,000","$3,000","$4,000","$5,000","$6,000","$7,000","$8,000")) +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 3500, y = 6000, size = 4,
+           label = paste("Population mean (95% confidence): $",
+                         prettyNum(summary_stats_contvar[3,3], digits = 3, big.mark = ","),
+                         "to $",
+                         prettyNum(summary_stats_contvar[3,4], digits = 3, big.mark = ","),
+                         "\nSample mean: $",
+                         prettyNum(summary_stats_contvar[3,1], digits = 3, big.mark = ","),
+                         "\nSample median: $",
+                         prettyNum(median(person_data$monthly_housing_total), digits = 3, big.mark = ","),
+                         "\nSample standard deviation: $",
+                         prettyNum(summary_stats_contvar[3,2], digits = 3, big.mark = ","),
+                         "\nSample interquartile range: $",
+                         prettyNum(quantile(person_data$monthly_housing_total)["25%"], digits = 4, big.mark = ","),
+                         "to $",
+                         prettyNum(quantile(person_data$monthly_housing_total)["75%"], digits = 4, big.mark = ",")),
+           hjust = 0, vjust = 1)
+
+```
+
+# Categorical Variables
+
+## Commute Mode of Transportation
 ```{r categorical}
 attach(person_data)
 transpo <- unique(transpo_mode)
@@ -68,7 +157,7 @@ taxi <- t.test(transpo_mode == transpo[9])
 ferry <- t.test(transpo_mode == transpo[10])
 motorcycle <- t.test(transpo_mode == transpo[11])
 
-shares <- tibble(transpo = c("Car, Truck, or Van",
+shares_transpo <- tibble(transpo = c("Car, Truck, or Van",
                              "Subway or elevated train",
                              "Walking",
                              "Railroad",
@@ -113,20 +202,171 @@ shares <- tibble(transpo = c("Car, Truck, or Van",
                              ferry$conf.int[2],
                              motorcycle$conf.int[2]))
 
-knitr::kable(shares, caption = "Proportions and 95-percent confidence intervals")
+knitr::kable(shares_transpo, caption = "Proportions and 95-percent confidence intervals of MA residents' commute tranportation mode")
 
 ```
-```{r visualize categorical variables}
-ggplot(shares,
+
+## Highest Level of Education
+
+```{r education level attainment}
+education<- unique(highest_education)
+education
+
+master<- t.test(highest_education == education[1])
+associate<- t.test(highest_education == education[2])
+reg_hs<- t.test(highest_education == education[3])
+college_deg<- t.test(highest_education == education[4])
+college_1yrnodeg<- t.test(highest_education == education[5])
+grade11<- t.test(highest_education == education[6])
+ged<- t.test(highest_education == education[7])
+college_less1yr<- t.test(highest_education == education[8])
+prof_deg<- t.test(highest_education == education[9])
+none<- t.test(highest_education == education[10])
+grade10<- t.test(highest_education == education[11])
+doctorate<- t.test(highest_education == education[12])
+grade7<- t.test(highest_education == education[13])
+grade12_nodip<- t.test(highest_education == education[14])
+grade9<- t.test(highest_education == education[15])
+grade8<- t.test(highest_education ==  education[16])
+grade6<- t.test(highest_education == education[17])
+grade3<- t.test(highest_education == education[18])
+grade4<- t.test(highest_education == education[19])
+grade5<- t.test(highest_education == education[20])
+grade2<- t.test(highest_education == education[21])
+grade1<- t.test(highest_education == education[22])
+kindergarten<- t.test(highest_education == education[23])
+preschool<- t.test(highest_education == education[24])
+
+shares_education <- tibble(education = c("Master's degree",
+                                         "Associate's degree",
+                                         "Regular high school diploma",
+                                         "Bachelor's degree",
+                                         "Some years of college credit, no degree",
+                                         "Grade 11",
+                                         "GED or alternative credential",
+                                         "Some college, but less than 1 year",
+                                         "Professional degree beyond a bachelor's degree",
+                                         "No schooling completed",
+                                         "Grade 10",
+                                         "Doctorate degree",
+                                         "Grade 7",
+                                         "12th grade-no diploma",
+                                         "Grade 9",
+                                         "Grade 8",
+                                         "Grade 6",
+                                         "Grade 3",
+                                         "Grade 4",
+                                         "Grade 5",
+                                         "Grade 2",
+                                         "Grade 1",
+                                         "Kindergarten",
+                                         "Nursery school, preschool"),
+                           `Share` = c(master$estimate,
+                                       associate$estimate,
+                                       reg_hs$estimate,
+                                       college_deg$estimate,
+                                       college_1yrnodeg$estimate,
+                                       grade11$estimate,
+                                       ged$estimate,
+                                       college_less1yr$estimate,
+                                       prof_deg$estimate,
+                                       none$estimate,
+                                       grade10$estimate,
+                                       doctorate$estimate,
+                                       grade7$estimate, 
+                                       grade12_nodip$estimate,
+                                       grade9$estimate,
+                                       grade8$estimate,
+                                       grade6$estimate,
+                                       grade3$estimate,
+                                       grade4$estimate,
+                                       grade5$estimate,
+                                       grade2$estimate,
+                                       grade1$estimate,
+                                       kindergarten$estimate,
+                                       preschool$estimate),
+                           Low = c(master$conf.int[1],
+                                       associate$conf.int[1],
+                                       reg_hs$conf.int[1],
+                                       college_deg$conf.int[1],
+                                       college_1yrnodeg$conf.int[1],
+                                       grade11$conf.int[1],
+                                       ged$conf.int[1],
+                                       college_less1yr$conf.int[1],
+                                       prof_deg$conf.int[1],
+                                       none$conf.int[1],
+                                       grade10$conf.int[1],
+                                       doctorate$conf.int[1],
+                                       grade7$conf.int[1], 
+                                       grade12_nodip$conf.int[1],
+                                       grade9$conf.int[1],
+                                       grade8$conf.int[1],
+                                       grade6$conf.int[1],
+                                       grade3$conf.int[1],
+                                       grade4$conf.int[1],
+                                       grade5$conf.int[1],
+                                       grade2$conf.int[1],
+                                       grade1$conf.int[1],
+                                       kindergarten$conf.int[1],
+                                       preschool$conf.int[1]),
+                           High = c(master$conf.int[2],
+                                       associate$conf.int[2],
+                                       reg_hs$conf.int[2],
+                                       college_deg$conf.int[2],
+                                       college_1yrnodeg$conf.int[2],
+                                       grade11$conf.int[2],
+                                       ged$conf.int[2],
+                                       college_less1yr$conf.int[2],
+                                       prof_deg$conf.int[2],
+                                       none$conf.int[2],
+                                       grade10$conf.int[2],
+                                       doctorate$conf.int[2],
+                                       grade7$conf.int[2], 
+                                       grade12_nodip$conf.int[2],
+                                       grade9$conf.int[2],
+                                       grade8$conf.int[2],
+                                       grade6$conf.int[2],
+                                       grade3$conf.int[2],
+                                       grade4$conf.int[2],
+                                       grade5$conf.int[2],
+                                       grade2$conf.int[2],
+                                       grade1$conf.int[2],
+                                       kindergarten$conf.int[2],
+                                       preschool$conf.int[2]))
+knitr::kable(shares_education, caption = "Proportions and 95-percent confidence intervals of MA residents' level of education")
+
+```
+
+
+
+
+# Visualize Categorical Variables
+
+## Commute Mode of Transportation
+
+```{r visualize categorical variables - transportation}
+ggplot(shares_transpo,
        aes(x = transpo, y = Share, ymin = Low, ymax = High)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", color = "purple") +
   geom_errorbar(width = 0.5) +
-  theme_classic() +
+  theme_light() +
   scale_x_discrete(name = "Commute Mode of Transportation") +
-  scale_y_continuous(name = "Percent of Population", labels = c("0%", "20%", "40%", "60%", "80%"))
+  scale_y_continuous(name = "Percent of Population", labels = c("0%", "20%", "40%", "60%", "80%")) +
+    theme_classic()+
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) 
 
+```
 
+## Highest Level of Education
 
-
-
+```{r visualize categorical variables - education}
+ggplot(shares_education,
+       aes(x = education, y = Share, ymin = Low, ymax = High)) +
+  geom_bar(stat = "identity", color = "red") +
+  geom_errorbar(width = 0.5) +
+  theme_light() +
+  scale_x_discrete(name = "Highest Level of Education") +
+  scale_y_continuous(name = "Percent of Population", labels = c("0%", "10%", "20%", "30%")) +
+    theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
 ```
