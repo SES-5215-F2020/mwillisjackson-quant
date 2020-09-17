@@ -20,14 +20,15 @@ library(tidyverse)
 person_data <- read_csv("people.csv")[,2:6]
 variables<- data.frame(c("Travel_Time","Household_Income","Housing_Cost"))
 mean<- data.frame(c(mean(person_data$travel_time), mean(person_data$household_income), mean(person_data$monthly_housing_total)))
+median<- data.frame(c(median(person_data$travel_time), median(person_data$household_income), median(person_data$monthly_housing_total)))
 standard_deviation<- data.frame(c(sd(person_data$travel_time),sd(person_data$household_income),sd(person_data$monthly_housing_total)))
 low_CI_95<- data.frame(c(1,1,1))
 high_CI_95<- data.frame(c(1,1,1))
 IQ_Range<- data.frame(c(IQR(person_data$travel_time),IQR(person_data$household_income),IQR(person_data$monthly_housing_total)))
-summary_stats_contvar<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range))
-colnames(summary_stats_contvar)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range")
+summary_stats_contvar<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range,median))
+colnames(summary_stats_contvar)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range","median")
 rownames(summary_stats_contvar)<- summary_stats_contvar$variable
-summary_stats_contvar<- summary_stats_contvar[,2:6]
+summary_stats_contvar<- summary_stats_contvar[,2:7]
 ```
 
 ```{r perform t tests for continuous variables}
