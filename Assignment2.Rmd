@@ -10,7 +10,7 @@ output:
 
 # Continuous Variables
 
-The following code will call the libraries and data, and put the means, standard deviations, 95% confidence intervals, and interquartile ranges for each of the continuous variables in one table.
+The following code will call the libraries and data, and put the means, medians, standard deviations, 95% confidence intervals, and interquartile ranges for each of the continuous variables in one table.
 
 ```{r create table, message= FALSE, results='hide'}
 library(readr)
@@ -206,6 +206,14 @@ shares_transpo <- tibble(transpo = c("Car, Truck, or Van",
                              ferry$conf.int[2],
                              motorcycle$conf.int[2]))
 
+paste("Of the 11 various modes of transport that MA residents use for their commute, the one with the highest percentage of MA residents in our sample is Car, Truck, or Van, which about",
+      prettyNum(shares_transpo[1,2]*100, digits = 2),
+      "percent of the sample population uses. We can say with 95% confidence that the true percent of MA residents who use a car, truck, or van for their commute is between",
+      prettyNum(shares_transpo[1,3]*100, digits = 3),
+      "and",
+      prettyNum(shares_transpo[1,4]*100, digits = 3),
+      "percent.")
+
 knitr::kable(shares_transpo, caption = "Proportions and 95-percent confidence intervals of MA residents' commute tranportation mode")
 
 ```
@@ -337,6 +345,14 @@ shares_education <- tibble(education = c("Master's degree",
                                        grade1$conf.int[2],
                                        kindergarten$conf.int[2],
                                        preschool$conf.int[2]))
+paste("Of the 24 various levels of education, the one with the highest percentage of MA residents in our sample is Bachelor's Degree, which about",
+      prettyNum(shares_education[4,2]*100, digits = 2),
+      "percent of the sample population holds. We can say with 95% confidence that the true percent of MA residents who hold a Bachelor's Degree as their highest level of education is between",
+      prettyNum(shares_education[4,3]*100, digits = 3),
+      "and",
+      prettyNum(shares_education[4,4]*100, digits = 3),
+      "percent.")
+
 knitr::kable(shares_education, caption = "Proportions and 95-percent confidence intervals of MA residents' level of education")
 
 ```
