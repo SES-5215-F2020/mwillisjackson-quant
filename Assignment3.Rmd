@@ -1,0 +1,317 @@
+---
+title: "Assignment3_Quant"
+author: "Megan Willis-Jackson"
+date: "9/19/2020"
+output: html_document
+---
+
+```{r load libraries, message=F}
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+
+```
+
+
+```{r}
+people<- read.csv("people.csv")
+people<- people[,2:7]
+education<- unique(people$highest_education)
+education
+people_mutated<- people %>%
+  mutate(education_binary = case_when(
+    highest_education == "Master's degree" ~ "Post HS",
+    highest_education == "Associate's degree" ~ "Post HS",
+    highest_education == "Regular high school deploma" ~ "HS/equivalent or less",
+    highest_education == "Bachelor's degree" ~ "Post HS",
+    highest_education == "1 or more years of college credit, no degree" ~ "Post HS",
+    highest_education == "Grade 11" ~ "HS/equivalent or less",
+    highest_education == "GED or alternative credential" ~ "HS/equivalent or less",
+    highest_education == "Some college, but less than 1 year" ~ "HS/equivalent or less",
+    highest_education == "Professional degree beyond a bachelor's degree" ~ "Post HS",
+    highest_education == "No schooling completed" ~ "HS/equivalent or less",
+    highest_education == "Grade 10" ~ "HS/equivalent or less",
+    highest_education == "Doctorate degree" ~ "Post HS",
+    highest_education == "Grade 7" ~ "HS/equivalent or less",
+    highest_education == "12th grade - no diploma" ~ "HS/equivalent or less",
+    highest_education == "Grade 9" ~ "HS/equivalent or less",
+    highest_education == "Grade 8" ~ "HS/equivalent or less",
+    highest_education == "Grade 6" ~ "HS/equivalent or less",
+    highest_education == "Grade 3" ~ "HS/equivalent or less",
+    highest_education == "Grade 4" ~ "HS/equivalent or less",
+    highest_education == "Grade 5" ~ "HS/equivalent or less",
+    highest_education == "Grade 2" ~ "HS/equivalent or less",
+    highest_education == "Grade 1" ~ "HS/equivalent or less",
+    highest_education == "Kindergarten" ~ "HS/equivalent or less",
+    highest_education == "Nursery school, preschool" ~ "HS/equivalent or less",
+    highest_education == "Regular high school diploma" ~ "HS/equivalent or less"
+  ))
+
+```
+
+## Correlation between Travel Time and Household Income
+The correlation between these two variables is weak but statistically significant and positive.
+
+```{r run tests - between continuous variables}
+attach(people_mutated)
+correlation1<- cor.test(travel_time, household_income)
+correlation1
+
+ggplot(people_mutated, aes(x = household_income, y = travel_time)) +
+  geom_point(size = .5, alpha = .25, position = "jitter") +
+  geom_smooth() +
+  scale_x_continuous(name = "Household Yearly Income",
+                     breaks = seq(0,1750000,by=250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M","$1.5M","$1.75M")) +
+  scale_y_continuous(name = "Commute Travel Time (hours)",
+                     breaks = seq(0, 210, by = 30),
+                     labels = c("0","0.5","1","1.5","2","2.5","3","3.5")) +
+  annotate(geom = "text", x = 0, y = 190,
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation1$conf.int[1], digits = 2),
+                         "to",
+                         prettyNum(correlation1$conf.int[2], digits =2)),
+           hjust = 0)
+```
+
+## Correlation between Travel Time and Monthly Housing Cost
+The correlation between these two variables is weak but statistically significant and positive.
+
+```{r run tests - travel time, monthly housing cost}
+correlation2<- cor.test(travel_time, monthly_housing_total)
+correlation2
+
+ggplot(people_mutated, aes(x = travel_time, y = monthly_housing_total)) +
+  geom_point(size = .5, alpha = .25, position = "jitter") +
+  geom_smooth() +
+  scale_x_continuous(name = "Commute Travel Time (hours)",
+                     breaks = seq(0, 210, by = 30),
+                     labels = c("0","0.5","1","1.5","2","2.5","3","3.5")) +
+  scale_y_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0,10000,by=2500),
+                     labels = c("$0","$2.5k","$5k","$7.5k","$10k")) +
+  annotate(geom = "text", x = 0, y = 8700,
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation2$conf.int[1], digits = 2),
+                         "to",
+                         prettyNum(correlation2$conf.int[2], digits =2)),
+           hjust = 0)
+
+```
+
+## Correlation between Monthly Household Income and Monthly Housing Cost
+The correlation between these two variables is moderately positive and is statistically significant.
+
+```{r}
+correlation3<- cor.test(household_income, monthly_housing_total)
+correlation3
+
+ggplot(people_mutated, aes(x = household_income, y = monthly_housing_total)) +
+  geom_point(size = .5, alpha = .25, position = "jitter") +
+  geom_smooth() +
+  scale_x_continuous(name = "Household Yearly Income",
+                     breaks = seq(0,1750000,by=250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M","$1.5M","$1.75M")) +
+  scale_y_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0,10000,by=2500),
+                     labels = c("$0","$2.5k","$5k","$7.5k","$10k")) +
+  annotate(geom = "text", x = 0, y = 10000,
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation3$conf.int[1], digits = 2),
+                         "to",
+                         prettyNum(correlation3$conf.int[2], digits =2)),
+           hjust = 0)
+
+
+```
+
+## Relationship between Travel Time and Level of Education
+
+```{r run tests - continuous and binary variables}
+difference1<- t.test(travel_time~ education_binary == "Post HS", data = people_mutated)
+difference1
+#The results of this t-test suggest that MA residents with a high school degree or less tend to have a shorter commute than those with education beyond high school.
+
+ggplot(people_mutated,
+       aes(x = education_binary,
+           y = travel_time)) +
+  geom_violin() +
+  theme_economist() +
+  scale_x_discrete(name = "Does the commuter have education beyond a high school degree?",
+                   labels = c("No","Yes")) +
+  scale_y_continuous(name = "Travel Time (minutes)") +
+  annotate(geom = "text", x = 1.5, y = 100, size = 3,
+           label = paste("Difference in means\n(95% confidence):\n",
+                         prettyNum(abs(difference1$conf.int[2]), 
+                                   digits = 0), " minutes to ",
+                         prettyNum(abs(difference1$conf.int[1]), 
+                                   digits = 0),
+                         " minutes",
+                         sep = "")) +
+  annotate(geom = "text", x = 1, y = difference1$estimate[1], size = 3,
+           label = paste("Mean (95% confidence):\n",
+                         prettyNum(difference1$estimate[1], digits = 0),
+                         "minutes")) +
+  annotate(geom = "text", x = 2, y = difference1$estimate[2], size = 3,
+           label = paste("\nMean (95% confidence):\n",
+                         prettyNum(difference1$estimate[2], digits = 0),
+                         "minutes"))
+
+```
+
+## Relationship between Yearly Household Income and Level of Education
+
+```{r}
+
+difference2<- t.test(household_income ~ education_binary == "Post HS")
+difference2
+
+ggplot(people_mutated,
+       aes(x = education_binary,
+           y = household_income)) +
+  geom_violin() +
+  theme_economist() +
+  scale_x_discrete(name = "Does the MA resident have education beyond a high school degree?",
+                   labels = c("No","Yes")) +
+  scale_y_continuous(name = "Yearly Household Income",
+                     breaks = seq(0,1750000,by=250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M","$1.5M","$1.75M")) +
+  annotate(geom = "text", x = 1.5, y = 1000000, size = 3,
+           label = paste("Difference in means\n(95% confidence):\n$",
+                         prettyNum(abs(difference2$conf.int[2]), big.mark = ",", 
+                                   digits = 3), " to $",
+                         prettyNum(abs(difference2$conf.int[1]), big.mark = ",", 
+                                   digits = 3),
+                         sep = "")) +
+  annotate(geom = "text", x = 1, y = difference2$estimate[1], size = 3,
+           label = paste("Mean (95% confidence):\n$",
+                         prettyNum(difference2$estimate[1], big.mark = ",", digits = 3))) +
+  annotate(geom = "text", x = 2, y = difference2$estimate[2], size = 3,
+           label = paste("\nMean (95% confidence):\n$",
+                         prettyNum(difference2$estimate[2], big.mark = ",", digits = 3)))
+
+
+
+```
+
+
+```{r}
+
+difference3<- t.test(monthly_housing_total ~ education_binary == "Post HS")
+difference3
+
+ggplot(people_mutated,
+       aes(x = education_binary,
+           y = monthly_housing_total)) +
+  geom_violin() +
+  theme_economist() +
+  scale_x_discrete(name = "Does the MA resident have education beyond a high school degree?",
+                   labels = c("No","Yes")) +
+  scale_y_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0,10000,by=2500),
+                     labels = c("$0","$2.5k","$5k","$7.5k","$10k")) + 
+  annotate(geom = "text", x = 1.5, y = 6000, size = 3,
+           label = paste("Difference in means\n(95% confidence):\n$",
+                         prettyNum(abs(difference3$conf.int[2]), big.mark = ",", 
+                                   digits = 3), " to $",
+                         prettyNum(abs(difference3$conf.int[1]), big.mark = ",", 
+                                   digits = 3),
+                         sep = "")) +
+  annotate(geom = "text", x = 1, y = difference3$estimate[1], size = 3,
+           label = paste("Mean (95% confidence):\n$",
+                         prettyNum(difference3$estimate[1], big.mark = ",", digits = 3))) +
+  annotate(geom = "text", x = 2, y = difference3$estimate[2], size = 3,
+           label = paste("\nMean (95% confidence):\n$",
+                         prettyNum(difference3$estimate[2], big.mark = ",", digits = 3)))
+
+
+```
+
+
+```{r run tests - continuous and categorical variables}
+anova1<- aov(travel_time ~ transpo_mode)
+summary(anova1)
+
+tukey1<- TukeyHSD(anova1)
+as_tibble(cbind(pair = row.names(tukey1$transpo_mode), tukey1$transpo_mode))
+
+ggplot(people_mutated, aes(x = transpo_mode, y = travel_time)) +
+  geom_boxplot() +
+  theme_economist() +
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  scale_x_discrete(name = "Mode of Transportation",
+                   labels = c("Bicycle",
+                              "Bus or trolley",
+                              "Car, truck, or van",
+                              "Ferry",
+                              "Motorcycle",
+                              "Other",
+                              "Railroad",
+                              "Streetcar or trolley",
+                              "Subway",
+                              "Taxi",
+                              "Walk")) +
+  scale_y_continuous(name = "Travel Time (minutes)", 
+                     breaks = seq(0, 210, by = 30),
+                     labels = paste(prettyNum(seq(0, 210, by = 30)))) 
+
+```
+
+
+```{r}
+
+anova2<- aov(household_income ~ transpo_mode)
+summary(anova2)
+
+tukey2<- TukeyHSD(anova2)
+as_tibble(cbind(pair = row.names(tukey2$transpo_mode), tukey2$transpo_mode))
+
+ggplot(people_mutated, aes(x = transpo_mode, y = household_income)) +
+  geom_boxplot() +
+  theme_economist() +
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  scale_x_discrete(name = "Mode of Transportation",
+                   labels = c("Bicycle",
+                              "Bus or trolley",
+                              "Car, truck, or van",
+                              "Ferry",
+                              "Motorcycle",
+                              "Other",
+                              "Railroad",
+                              "Streetcar or trolley",
+                              "Subway",
+                              "Taxi",
+                              "Walk")) +
+  scale_y_continuous(name = "Yearly Household Income", 
+                     breaks = seq(0, 1500000, by = 250000),
+                     labels = paste(prettyNum(seq(0, 1500000, by = 250000)))) 
+
+```
+
+
+
+```{r}
+
+anova3<- aov(monthly_housing_total ~ transpo_mode)
+summary(anova3)
+
+
+
+
+
+```
+
+
+
+```{r run tests - categorical variables}
+chi_sq1<- chisq.test(transpo_mode, highest_education)
+chi_sq1
+
+chi_sq1$observed
+
+chi_sq2<- chisq.test(transpo_mode, education_binary)
+chi_sq2
+
+chi_sq2$observed
+
+```
