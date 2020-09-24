@@ -2,16 +2,27 @@
 title: "Assignment3_Quant"
 author: "Megan Willis-Jackson"
 date: "9/19/2020"
-output: html_document
+output: 
+  html_document:
+    toc: yes
+    toc_level: 3
+    toc_float: yes
+    code_folding: hide
 ---
 
+# Load Libraries
 ```{r load libraries, message=F}
 library(tidyverse)
 library(ggplot2)
 library(ggthemes)
+library(naniar)
+library(gridExtra)
 
 ```
 
+# Load Data and Some Data Cleaning
+
+I decided that it would be useful to examine the education variable as a binary, with one category being people with up to and including a high school diploma or equivalent, and the other category being people with education above a high school degree. The code below creates a new binary variable based on these categories.
 
 ```{r}
 people<- read.csv("people.csv")
@@ -48,9 +59,12 @@ people_mutated<- people %>%
   ))
 
 ```
+# Examining Relationships
 
-## Correlation between Travel Time and Household Income
-The correlation between these two variables is weak but statistically significant and positive.
+## Relationships between Two Continuous Variables
+
+### Correlation between Travel Time and Household Income
+The correlation between these two variables is weak but statistically significant and positive. The 95% CI is between .08 and .11 which is a pretty weak correlation, but as it does not cross 0, we can say with 95% confidence that the true correlation is positive, if weak. The graph shows that the higher the yearly income, the less predictable the commute time is because there are much fewer observations to analyze after about $750k per year.
 
 ```{r run tests - between continuous variables}
 attach(people_mutated)
@@ -74,8 +88,8 @@ ggplot(people_mutated, aes(x = household_income, y = travel_time)) +
            hjust = 0)
 ```
 
-## Correlation between Travel Time and Monthly Housing Cost
-The correlation between these two variables is weak but statistically significant and positive.
+### Correlation between Travel Time and Monthly Housing Cost
+The correlation between these two variables is weak but statistically significant and positive. Like the above test, the confidence interval does not include 0 so we can say with 95% confidence that the true correlation between travel time and the monthly cost of housing is positive, if weak.
 
 ```{r run tests - travel time, monthly housing cost}
 correlation2<- cor.test(travel_time, monthly_housing_total)
@@ -99,8 +113,8 @@ ggplot(people_mutated, aes(x = travel_time, y = monthly_housing_total)) +
 
 ```
 
-## Correlation between Monthly Household Income and Monthly Housing Cost
-The correlation between these two variables is moderately positive and is statistically significant.
+### Correlation between Monthly Household Income and Monthly Housing Cost
+The correlation between these two variables is moderately positive and is statistically significant. As household income rises, the monthly housing cost also tends to rise. This makes sense as there tend to be restrictions on what lease or mortgage a person is able to secure based on their yearly income. What would also be interesting to look at is how the percentage of one's income spent on housing costs changes by income. We may see some different trends there.
 
 ```{r}
 correlation3<- cor.test(household_income, monthly_housing_total)
@@ -125,12 +139,15 @@ ggplot(people_mutated, aes(x = household_income, y = monthly_housing_total)) +
 
 ```
 
-## Relationship between Travel Time and Level of Education
+## Relationships between Continuous and Binary Variables
+
+### Relationship between Travel Time and Level of Education
+
+The results of this t-test suggest that MA residents with a high school degree or less tend to have a shorter commute than those with education beyond high school. It's not by much, just five or so minutes, but it is interesting to know. I wonder if the reason is that people with an education above a high school degree tend to live farther from their places of work, or if their modes of commute differ and one tends to take longer.
 
 ```{r run tests - continuous and binary variables}
 difference1<- t.test(travel_time~ education_binary == "Post HS", data = people_mutated)
 difference1
-#The results of this t-test suggest that MA residents with a high school degree or less tend to have a shorter commute than those with education beyond high school.
 
 ggplot(people_mutated,
        aes(x = education_binary,
@@ -159,7 +176,9 @@ ggplot(people_mutated,
 
 ```
 
-## Relationship between Yearly Household Income and Level of Education
+### Relationship between Yearly Household Income and Level of Education
+
+There is a really wide range of salaries for people with a HS diploma or less and people with education above a HS diploma, although on average people with some form of higher education make a higher annual salary than those without. We can be 95% confident that the true difference in mean salaries for all MA commuters with and without higher education is $51.5k and $61.6k per year.
 
 ```{r}
 
@@ -194,6 +213,9 @@ ggplot(people_mutated,
 
 ```
 
+### Relationship between Monthly Housing Cost and Level of Education
+
+We can be 95% confident that MA residents with some form of higher education pay, on average, between $503 to $549 more per month for housing than MA residents without any form of higher education. 
 
 ```{r}
 
@@ -227,6 +249,11 @@ ggplot(people_mutated,
 
 ```
 
+## Relationship between Continuous and Categorical Variables
+
+### Relationship between Travel Time and Mode of Transportation
+
+The result of the ANOVA test shows a p-value of well below 0.05, suggesting that there is a relationship between the commute time and a person's mode of transportation for their commute. This result is statistically significant at the 95% confidence level. The railroad tends to take the longest on average as shown by the boxplots, which seems logical given that in MA, the railroad (i.e., Commuter Rail) is accessible by MA residents living quite far outside of the city. Walking seems to take the least time on average, which also makes sense as many people likely would not choose to walk as their main mode of commuting if they did not live within a short distance. Commuting by car, truck, or van has the widest range of commute times.
 
 ```{r run tests - continuous and categorical variables}
 anova1<- aov(travel_time ~ transpo_mode)
@@ -257,6 +284,9 @@ ggplot(people_mutated, aes(x = transpo_mode, y = travel_time)) +
 
 ```
 
+### Relationship between Yearly Household Income and Mode of Transportation
+
+The relationship between yearly household income and commute mode of transportation is also statistically significant at the 95% confidence level because it has a p-value much smaller than 0.05. I will be interested to see these variables run through a regression because from the appearance of the boxplots, each mode has quite a range of annual incomes associated with them. It will be interesting to see what the estimated coefficients turn out to be.
 
 ```{r}
 
@@ -283,35 +313,534 @@ ggplot(people_mutated, aes(x = transpo_mode, y = household_income)) +
                               "Taxi",
                               "Walk")) +
   scale_y_continuous(name = "Yearly Household Income", 
-                     breaks = seq(0, 1500000, by = 250000),
-                     labels = paste(prettyNum(seq(0, 1500000, by = 250000)))) 
+                     breaks = seq(0, 1250000, by = 250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M")) 
 
 ```
 
+### Relationship between Monthly Housing Cost and Mode of Transportation
 
+Again, with a p-value much smaller than 0.05, this relationship is statistically significant at the 95% confidence level. Similar to the annual income and transportation mode, there seems to be a wide range of housing costs for each of the modes, so it will be interesting to see this in a regression as well.
 
 ```{r}
 
 anova3<- aov(monthly_housing_total ~ transpo_mode)
 summary(anova3)
 
+tukey3<- TukeyHSD(anova3)
+as_tibble(cbind(pair = row.names(tukey3$transpo_mode), tukey3$transpo_mode))
 
+ggplot(people_mutated, aes(x = transpo_mode, y = monthly_housing_total)) +
+  geom_boxplot() +
+  theme_economist() +
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  scale_x_discrete(name = "Mode of Transportation",
+                   labels = c("Bicycle",
+                              "Bus or trolley",
+                              "Car, truck, or van",
+                              "Ferry",
+                              "Motorcycle",
+                              "Other",
+                              "Railroad",
+                              "Streetcar or trolley",
+                              "Subway",
+                              "Taxi",
+                              "Walk")) +
+  scale_y_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0, 10000, by = (2500)),
+                     labels = c("$0","$2.5k","$5k","$7.5k","$10k"))
 
 
 
 ```
 
+## Relationship between Categorical Variables
 
+### Relationship between Level of Education and Mode of Transportation
+
+Each of the chi-square tests run below produce the warning that the approximation may be incorrect. This is because that for both levels of education and mode of transportation, there are several categories that have very few observations. Because of this, when breaking them out and cross-tabbing them with many other categories, several of them are fewer than five. This is something to be aware of when I review the results, because small sample sizes are much less likely to properly represent the full population.
+
+That being said, all of the chi-square tests run below for the categories between mode of transportation and level of education appear to be statistically significant at the 95% confidence level apart from motorcycles and streetcars. Therefore, we would not say with any degree of confidence that there is a relationship between a MA resident's level of education and whether they use a motorcycle or streetcar to commute to work.
 
 ```{r run tests - categorical variables}
+##Chi square tests for each of the transpo and education levels
 chi_sq1<- chisq.test(transpo_mode, highest_education)
 chi_sq1
 
-chi_sq1$observed
+chi_sq_educ_bicycle<- chisq.test(highest_education, transpo_mode == "Bicycle")
+chi_sq_educ_bicycle
 
-chi_sq2<- chisq.test(transpo_mode, education_binary)
-chi_sq2
+chi_sq_educ_bus<- chisq.test(highest_education, transpo_mode == "Bus or trolley bus")
+chi_sq_educ_bus
 
-chi_sq2$observed
+chi_sq_educ_car<- chisq.test(highest_education, transpo_mode == "Car, truck, or van")
+chi_sq_educ_car
+
+chi_sq_educ_ferry<- chisq.test(highest_education, transpo_mode == "Ferryboat")
+chi_sq_educ_ferry
+
+chi_sq_educ_motorcycle<- chisq.test(highest_education, transpo_mode == "Motorcycle")
+chi_sq_educ_motorcycle
+
+chi_sq_educ_other<- chisq.test(highest_education, transpo_mode == "Other method")
+chi_sq_educ_other
+
+chi_sq_educ_rail<- chisq.test(highest_education, transpo_mode == "Railroad")
+chi_sq_educ_rail
+
+chi_sq_educ_streetcar<- chisq.test(highest_education, transpo_mode == "Streetcar or trolley car (carro publico in Puerto Rico)")
+chi_sq_educ_streetcar
+
+chi_sq_educ_sub<- chisq.test(highest_education, transpo_mode == "Subway or elevated")
+chi_sq_educ_sub
+
+chi_sq_educ_taxi<- chisq.test(highest_education, transpo_mode == "Taxicab")
+chi_sq_educ_taxi
+
+chi_sq_educ_walk<- chisq.test(highest_education, transpo_mode == "Walked")
+chi_sq_educ_walk
+
+
+```
+
+#### Visualize the Chi-Square Results
+
+Credit for the idea to represent chi-square results as a heatmap and the base code for it all goes to Ryan Johnson -  he was kind enough to share his code. I adapted it to my variables and additionally added the p-values of the individual tests as a display in the graphic in order to demonstrate not just the magnitude of difference, but also whether it's statistically significant or not.
+
+```{r heatmaps for chi-square, fig.width=15}
+C_diff_education<- chi_sq1$observed - chi_sq1$expected
+
+C_diff_education_data<- as.data.frame(C_diff_education)
+
+C_diff_education_data$p.value<- NA
+attach(C_diff_education_data)
+C_diff_education_data$p.value<- ifelse(transpo_mode == "Bicycle",
+                                       chi_sq_educ_bicycle$p.value,
+                                  ifelse(transpo_mode == "Bus or trolley bus",
+                                         chi_sq_educ_bus$p.value,
+                                    ifelse(transpo_mode == "Car, truck, or van",
+                                           chi_sq_educ_car$p.value,
+                                      ifelse(transpo_mode == "Ferryboat",
+                                             chi_sq_educ_ferry$p.value,
+                                        ifelse(transpo_mode == "Motorcycle",
+                                               chi_sq_educ_motorcycle$p.value,
+                                          ifelse(transpo_mode == "Other method",
+                                                 chi_sq_educ_other$p.value,
+                                            ifelse(transpo_mode == "Railroad",
+                                                   chi_sq_educ_rail$p.value,
+                                              ifelse(transpo_mode == "Streetcar or trolley
+                                                     car (carro publico in Puerto Rico)",
+                                                     chi_sq_educ_streetcar$p.value,
+                                                ifelse(transpo_mode == "Subway or elevated",
+                                                       chi_sq_educ_sub$p.value,
+                                                  ifelse(transpo_mode == "Taxicab",
+                                                         chi_sq_educ_taxi$p.value,
+                                                    ifelse(transpo_mode == "Walked",
+                                                           chi_sq_educ_walk$p.value,
+                                                           NA)))))))))))
+C_diff_education_data$stat_sig<- if_else(C_diff_education_data$p.value < .05, "Yes", "No")
+
+#The code below re-codes the education variables so that they are
+#presented in order of achievement (e.g., so that 
+#a Doctorate comes after a Master's degree, even though
+#D comes alphabetically before M)
+C_diff_education_data2<- C_diff_education_data %>%
+  mutate(highest_education = case_when(
+    highest_education == "Regular high school diploma" ~ "[1] High School Diploma",
+    highest_education == "GED or alternative credential" ~ "[2] GED",
+    highest_education == "Some college, but less than 1 year" ~ "[3] College <1 Year",
+    highest_education == "1 or more years of college credit, no degree" ~ "[4] Some College, No Degree",
+    highest_education == "Associate's degree" ~ "[5] Associate's Degree",
+    highest_education == "Bachelor's degree" ~ "[6] Bachelor's Degree",
+    highest_education == "Professional degree beyond a bachelor's degree" ~ "[7] Prof Degree",
+    highest_education == "Master's degree" ~ "[8] Master's Degree",
+    highest_education == "Doctorate degree" ~ "[9] Doctorate Degree"
+))
+
+#Format some of the entries that will show up as labels
+#to make them shorter
+C_diff_education_data2$transpo_mode<- str_replace_all(C_diff_education_data2$transpo_mode,"(carro publico in Puerto Rico)","")
+C_diff_education_data2$transpo_mode<- str_replace_all(C_diff_education_data2$transpo_mode,"[[:punct:]]","")
+
+#Remove those whose highest level of education is below high school.
+#The reason I do this is because, the first time I visualized the
+#heatmap, there were no instances where those levels of education
+#used a mode that was different from what the "expected" values
+#of the chi-square test were. So, while the results were statistically
+#significant at the 95% level, they did not add any new information
+#in the context of the heatmap below.
+
+C_diff_education_data2<- na.omit(C_diff_education_data2)
+
+detach(C_diff_education_data)
+
+C_diff_education_heatmap<- ggplot(C_diff_education_data2,
+                                  aes(x = transpo_mode,
+                                      y = highest_education,
+                                      fill = Freq,
+                                      color = stat_sig)) +
+  geom_tile() +
+  theme(legend.key.size = unit(.7, "cm"),
+        axis.text.x = element_text(angle = 25, hjust = 1, size = 13)) +
+  scale_fill_gradient2(name = "Difference between \nObserved and \nExpected Values",
+                       midpoint = 0,
+                       low = "blue",
+                       mid = "white",
+                       high = "orange",
+                       space = "Lab") +
+  scale_color_manual(name = "Statistically Sig. \nat 95% conf.level", values = c("grey", "red")) +
+  scale_x_discrete(name = "Commute Mode of Transportation") +
+  scale_y_discrete(name = "Highest Level of Education") +
+  ggtitle(label = "Absolute Differences Heatmap")
+
+  
+  
+C_diff_education_heatmap
+
+```
+
+
+I think the previous heatmap is really cool and demonstrates some neat data, but it does have some limitations. For example, there is no way to see any differences across the ferryboat, motorcycle, or streetcar commuters as there are so few people in MA who use those modes to commute so even if there is a 100% difference between expected and observed values, we would not see it. To address this, below I present essentially the same chart, except the difference between observed and expected is presented as a proportion of the total number of commuters using that mode of transportation with that education level.
+
+I am also positive that the below ~250 lines of code could be done in a pretty basic loop instead, but unfortunately I don't know how! That's something I'm interested in learning about, but I'm adding this proportional heatmap in relatively late in this assignment so learning about loops will have to wait.
+```{r - heatmap proportions}
+C_diff_education_proportion<- C_diff_education_data
+
+C_diff_education_proportion$total<- NA
+
+C_diff_education_proportion[1,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[1,1] & people_mutated$highest_education == C_diff_education_proportion[1,2])
+C_diff_education_proportion[2,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[2,1] & people_mutated$highest_education == C_diff_education_proportion[2,2])
+C_diff_education_proportion[3,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[3,1] & people_mutated$highest_education == C_diff_education_proportion[3,2])
+C_diff_education_proportion[4,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[4,1] & people_mutated$highest_education == C_diff_education_proportion[4,2])
+C_diff_education_proportion[5,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[5,1] & people_mutated$highest_education == C_diff_education_proportion[5,2])
+C_diff_education_proportion[6,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[6,1] & people_mutated$highest_education == C_diff_education_proportion[6,2])
+C_diff_education_proportion[7,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[7,1] & people_mutated$highest_education == C_diff_education_proportion[7,2])
+C_diff_education_proportion[8,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[8,1] & people_mutated$highest_education == C_diff_education_proportion[8,2])
+C_diff_education_proportion[9,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[9,1] & people_mutated$highest_education == C_diff_education_proportion[9,2])
+C_diff_education_proportion[10,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[10,1] & people_mutated$highest_education == C_diff_education_proportion[10,2])
+C_diff_education_proportion[11,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[11,1] & people_mutated$highest_education == C_diff_education_proportion[11,2])
+C_diff_education_proportion[12,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[12,1] & people_mutated$highest_education == C_diff_education_proportion[12,2])
+C_diff_education_proportion[13,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[13,1] & people_mutated$highest_education == C_diff_education_proportion[13,2])
+C_diff_education_proportion[14,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[14,1] & people_mutated$highest_education == C_diff_education_proportion[14,2])
+C_diff_education_proportion[15,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[15,1] & people_mutated$highest_education == C_diff_education_proportion[15,2])
+C_diff_education_proportion[16,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[16,1] & people_mutated$highest_education == C_diff_education_proportion[16,2])
+C_diff_education_proportion[17,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[17,1] & people_mutated$highest_education == C_diff_education_proportion[17,2])
+C_diff_education_proportion[18,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[18,1] & people_mutated$highest_education == C_diff_education_proportion[18,2])
+C_diff_education_proportion[19,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[19,1] & people_mutated$highest_education == C_diff_education_proportion[19,2])
+C_diff_education_proportion[20,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[20,1] & people_mutated$highest_education == C_diff_education_proportion[20,2])
+C_diff_education_proportion[21,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[21,1] & people_mutated$highest_education == C_diff_education_proportion[21,2])
+C_diff_education_proportion[22,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[22,1] & people_mutated$highest_education == C_diff_education_proportion[22,2])
+C_diff_education_proportion[23,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[23,1] & people_mutated$highest_education == C_diff_education_proportion[23,2])
+C_diff_education_proportion[24,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[24,1] & people_mutated$highest_education == C_diff_education_proportion[24,2])
+C_diff_education_proportion[25,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[25,1] & people_mutated$highest_education == C_diff_education_proportion[25,2])
+C_diff_education_proportion[26,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[26,1] & people_mutated$highest_education == C_diff_education_proportion[26,2])
+C_diff_education_proportion[27,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[27,1] & people_mutated$highest_education == C_diff_education_proportion[27,2])
+C_diff_education_proportion[28,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[28,1] & people_mutated$highest_education == C_diff_education_proportion[28,2])
+C_diff_education_proportion[29,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[29,1] & people_mutated$highest_education == C_diff_education_proportion[29,2])
+C_diff_education_proportion[30,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[30,1] & people_mutated$highest_education == C_diff_education_proportion[30,2])
+C_diff_education_proportion[31,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[31,1] & people_mutated$highest_education == C_diff_education_proportion[31,2])
+C_diff_education_proportion[32,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[32,1] & people_mutated$highest_education == C_diff_education_proportion[32,2])
+C_diff_education_proportion[33,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[33,1] & people_mutated$highest_education == C_diff_education_proportion[33,2])
+C_diff_education_proportion[34,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[34,1] & people_mutated$highest_education == C_diff_education_proportion[34,2])
+C_diff_education_proportion[35,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[35,1] & people_mutated$highest_education == C_diff_education_proportion[35,2])
+C_diff_education_proportion[36,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[36,1] & people_mutated$highest_education == C_diff_education_proportion[36,2])
+C_diff_education_proportion[37,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[37,1] & people_mutated$highest_education == C_diff_education_proportion[37,2])
+C_diff_education_proportion[38,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[38,1] & people_mutated$highest_education == C_diff_education_proportion[38,2])
+C_diff_education_proportion[39,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[39,1] & people_mutated$highest_education == C_diff_education_proportion[39,2])
+C_diff_education_proportion[40,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[40,1] & people_mutated$highest_education == C_diff_education_proportion[40,2])
+C_diff_education_proportion[41,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[41,1] & people_mutated$highest_education == C_diff_education_proportion[41,2])
+C_diff_education_proportion[42,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[42,1] & people_mutated$highest_education == C_diff_education_proportion[42,2])
+C_diff_education_proportion[43,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[43,1] & people_mutated$highest_education == C_diff_education_proportion[43,2])
+C_diff_education_proportion[44,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[44,1] & people_mutated$highest_education == C_diff_education_proportion[44,2])
+C_diff_education_proportion[45,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[45,1] & people_mutated$highest_education == C_diff_education_proportion[45,2])
+C_diff_education_proportion[46,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[46,1] & people_mutated$highest_education == C_diff_education_proportion[46,2])
+C_diff_education_proportion[47,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[47,1] & people_mutated$highest_education == C_diff_education_proportion[47,2])
+C_diff_education_proportion[48,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[48,1] & people_mutated$highest_education == C_diff_education_proportion[48,2])
+C_diff_education_proportion[49,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[49,1] & people_mutated$highest_education == C_diff_education_proportion[49,2])
+C_diff_education_proportion[50,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[50,1] & people_mutated$highest_education == C_diff_education_proportion[50,2])
+C_diff_education_proportion[51,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[51,1] & people_mutated$highest_education == C_diff_education_proportion[51,2])
+C_diff_education_proportion[52,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[52,1] & people_mutated$highest_education == C_diff_education_proportion[52,2])
+C_diff_education_proportion[53,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[53,1] & people_mutated$highest_education == C_diff_education_proportion[53,2])
+C_diff_education_proportion[54,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[54,1] & people_mutated$highest_education == C_diff_education_proportion[54,2])
+C_diff_education_proportion[55,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[55,1] & people_mutated$highest_education == C_diff_education_proportion[55,2])
+C_diff_education_proportion[56,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[56,1] & people_mutated$highest_education == C_diff_education_proportion[56,2])
+C_diff_education_proportion[57,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[57,1] & people_mutated$highest_education == C_diff_education_proportion[57,2])
+C_diff_education_proportion[58,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[58,1] & people_mutated$highest_education == C_diff_education_proportion[58,2])
+C_diff_education_proportion[59,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[59,1] & people_mutated$highest_education == C_diff_education_proportion[59,2])
+C_diff_education_proportion[60,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[60,1] & people_mutated$highest_education == C_diff_education_proportion[60,2])
+C_diff_education_proportion[61,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[61,1] & people_mutated$highest_education == C_diff_education_proportion[61,2])
+C_diff_education_proportion[62,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[62,1] & people_mutated$highest_education == C_diff_education_proportion[62,2])
+C_diff_education_proportion[63,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[63,1] & people_mutated$highest_education == C_diff_education_proportion[63,2])
+C_diff_education_proportion[64,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[64,1] & people_mutated$highest_education == C_diff_education_proportion[64,2])
+C_diff_education_proportion[65,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[65,1] & people_mutated$highest_education == C_diff_education_proportion[65,2])
+C_diff_education_proportion[66,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[66,1] & people_mutated$highest_education == C_diff_education_proportion[66,2])
+C_diff_education_proportion[67,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[67,1] & people_mutated$highest_education == C_diff_education_proportion[67,2])
+C_diff_education_proportion[68,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[68,1] & people_mutated$highest_education == C_diff_education_proportion[68,2])
+C_diff_education_proportion[69,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[69,1] & people_mutated$highest_education == C_diff_education_proportion[69,2])
+C_diff_education_proportion[70,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[70,1] & people_mutated$highest_education == C_diff_education_proportion[70,2])
+C_diff_education_proportion[71,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[71,1] & people_mutated$highest_education == C_diff_education_proportion[71,2])
+C_diff_education_proportion[72,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[72,1] & people_mutated$highest_education == C_diff_education_proportion[72,2])
+C_diff_education_proportion[73,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[73,1] & people_mutated$highest_education == C_diff_education_proportion[73,2])
+C_diff_education_proportion[74,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[74,1] & people_mutated$highest_education == C_diff_education_proportion[74,2])
+C_diff_education_proportion[75,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[75,1] & people_mutated$highest_education == C_diff_education_proportion[75,2])
+C_diff_education_proportion[76,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[76,1] & people_mutated$highest_education == C_diff_education_proportion[76,2])
+C_diff_education_proportion[77,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[77,1] & people_mutated$highest_education == C_diff_education_proportion[77,2])
+C_diff_education_proportion[78,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[78,1] & people_mutated$highest_education == C_diff_education_proportion[78,2])
+C_diff_education_proportion[79,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[79,1] & people_mutated$highest_education == C_diff_education_proportion[79,2])
+C_diff_education_proportion[80,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[80,1] & people_mutated$highest_education == C_diff_education_proportion[80,2])
+C_diff_education_proportion[81,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[81,1] & people_mutated$highest_education == C_diff_education_proportion[81,2])
+C_diff_education_proportion[82,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[82,1] & people_mutated$highest_education == C_diff_education_proportion[82,2])
+C_diff_education_proportion[83,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[83,1] & people_mutated$highest_education == C_diff_education_proportion[83,2])
+C_diff_education_proportion[84,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[84,1] & people_mutated$highest_education == C_diff_education_proportion[84,2])
+C_diff_education_proportion[85,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[85,1] & people_mutated$highest_education == C_diff_education_proportion[85,2])
+C_diff_education_proportion[86,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[86,1] & people_mutated$highest_education == C_diff_education_proportion[86,2])
+C_diff_education_proportion[87,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[87,1] & people_mutated$highest_education == C_diff_education_proportion[87,2])
+C_diff_education_proportion[88,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[88,1] & people_mutated$highest_education == C_diff_education_proportion[88,2])
+C_diff_education_proportion[89,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[89,1] & people_mutated$highest_education == C_diff_education_proportion[89,2])
+C_diff_education_proportion[90,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[90,1] & people_mutated$highest_education == C_diff_education_proportion[90,2])
+C_diff_education_proportion[91,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[91,1] & people_mutated$highest_education == C_diff_education_proportion[91,2])
+C_diff_education_proportion[92,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[92,1] & people_mutated$highest_education == C_diff_education_proportion[92,2])
+C_diff_education_proportion[93,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[93,1] & people_mutated$highest_education == C_diff_education_proportion[93,2])
+C_diff_education_proportion[94,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[94,1] & people_mutated$highest_education == C_diff_education_proportion[94,2])
+C_diff_education_proportion[95,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[95,1] & people_mutated$highest_education == C_diff_education_proportion[95,2])
+C_diff_education_proportion[96,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[96,1] & people_mutated$highest_education == C_diff_education_proportion[96,2])
+C_diff_education_proportion[97,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[97,1] & people_mutated$highest_education == C_diff_education_proportion[97,2])
+C_diff_education_proportion[98,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[98,1] & people_mutated$highest_education == C_diff_education_proportion[98,2])
+C_diff_education_proportion[99,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[99,1] & people_mutated$highest_education == C_diff_education_proportion[99,2])
+C_diff_education_proportion[100,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[100,1] & people_mutated$highest_education == C_diff_education_proportion[100,2])
+C_diff_education_proportion[101,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[101,1] & people_mutated$highest_education == C_diff_education_proportion[101,2])
+C_diff_education_proportion[102,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[102,1] & people_mutated$highest_education == C_diff_education_proportion[102,2])
+C_diff_education_proportion[103,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[103,1] & people_mutated$highest_education == C_diff_education_proportion[103,2])
+C_diff_education_proportion[104,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[104,1] & people_mutated$highest_education == C_diff_education_proportion[104,2])
+C_diff_education_proportion[105,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[105,1] & people_mutated$highest_education == C_diff_education_proportion[105,2])
+C_diff_education_proportion[106,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[106,1] & people_mutated$highest_education == C_diff_education_proportion[106,2])
+C_diff_education_proportion[107,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[107,1] & people_mutated$highest_education == C_diff_education_proportion[107,2])
+C_diff_education_proportion[108,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[108,1] & people_mutated$highest_education == C_diff_education_proportion[108,2])
+C_diff_education_proportion[109,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[109,1] & people_mutated$highest_education == C_diff_education_proportion[109,2])
+C_diff_education_proportion[110,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[110,1] & people_mutated$highest_education == C_diff_education_proportion[110,2])
+C_diff_education_proportion[111,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[111,1] & people_mutated$highest_education == C_diff_education_proportion[111,2])
+C_diff_education_proportion[112,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[112,1] & people_mutated$highest_education == C_diff_education_proportion[112,2])
+C_diff_education_proportion[113,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[113,1] & people_mutated$highest_education == C_diff_education_proportion[113,2])
+C_diff_education_proportion[114,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[114,1] & people_mutated$highest_education == C_diff_education_proportion[114,2])
+C_diff_education_proportion[115,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[115,1] & people_mutated$highest_education == C_diff_education_proportion[115,2])
+C_diff_education_proportion[116,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[116,1] & people_mutated$highest_education == C_diff_education_proportion[116,2])
+C_diff_education_proportion[117,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[117,1] & people_mutated$highest_education == C_diff_education_proportion[117,2])
+C_diff_education_proportion[118,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[118,1] & people_mutated$highest_education == C_diff_education_proportion[118,2])
+C_diff_education_proportion[119,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[119,1] & people_mutated$highest_education == C_diff_education_proportion[119,2])
+C_diff_education_proportion[120,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[120,1] & people_mutated$highest_education == C_diff_education_proportion[120,2])
+C_diff_education_proportion[121,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[121,1] & people_mutated$highest_education == C_diff_education_proportion[121,2])
+C_diff_education_proportion[122,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[122,1] & people_mutated$highest_education == C_diff_education_proportion[122,2])
+C_diff_education_proportion[123,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[123,1] & people_mutated$highest_education == C_diff_education_proportion[123,2])
+C_diff_education_proportion[124,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[124,1] & people_mutated$highest_education == C_diff_education_proportion[124,2])
+C_diff_education_proportion[125,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[125,1] & people_mutated$highest_education == C_diff_education_proportion[125,2])
+C_diff_education_proportion[126,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[126,1] & people_mutated$highest_education == C_diff_education_proportion[126,2])
+C_diff_education_proportion[127,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[127,1] & people_mutated$highest_education == C_diff_education_proportion[127,2])
+C_diff_education_proportion[128,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[128,1] & people_mutated$highest_education == C_diff_education_proportion[128,2])
+C_diff_education_proportion[129,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[129,1] & people_mutated$highest_education == C_diff_education_proportion[129,2])
+C_diff_education_proportion[130,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[130,1] & people_mutated$highest_education == C_diff_education_proportion[130,2])
+C_diff_education_proportion[131,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[131,1] & people_mutated$highest_education == C_diff_education_proportion[131,2])
+C_diff_education_proportion[132,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[132,1] & people_mutated$highest_education == C_diff_education_proportion[132,2])
+C_diff_education_proportion[133,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[133,1] & people_mutated$highest_education == C_diff_education_proportion[133,2])
+C_diff_education_proportion[134,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[134,1] & people_mutated$highest_education == C_diff_education_proportion[134,2])
+C_diff_education_proportion[135,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[135,1] & people_mutated$highest_education == C_diff_education_proportion[135,2])
+C_diff_education_proportion[136,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[136,1] & people_mutated$highest_education == C_diff_education_proportion[136,2])
+C_diff_education_proportion[137,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[137,1] & people_mutated$highest_education == C_diff_education_proportion[137,2])
+C_diff_education_proportion[138,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[138,1] & people_mutated$highest_education == C_diff_education_proportion[138,2])
+C_diff_education_proportion[139,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[139,1] & people_mutated$highest_education == C_diff_education_proportion[139,2])
+C_diff_education_proportion[140,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[140,1] & people_mutated$highest_education == C_diff_education_proportion[140,2])
+C_diff_education_proportion[141,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[141,1] & people_mutated$highest_education == C_diff_education_proportion[141,2])
+C_diff_education_proportion[142,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[142,1] & people_mutated$highest_education == C_diff_education_proportion[142,2])
+C_diff_education_proportion[143,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[143,1] & people_mutated$highest_education == C_diff_education_proportion[143,2])
+C_diff_education_proportion[144,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[144,1] & people_mutated$highest_education == C_diff_education_proportion[144,2])
+C_diff_education_proportion[145,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[145,1] & people_mutated$highest_education == C_diff_education_proportion[145,2])
+C_diff_education_proportion[146,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[146,1] & people_mutated$highest_education == C_diff_education_proportion[146,2])
+C_diff_education_proportion[147,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[147,1] & people_mutated$highest_education == C_diff_education_proportion[147,2])
+C_diff_education_proportion[148,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[148,1] & people_mutated$highest_education == C_diff_education_proportion[148,2])
+C_diff_education_proportion[149,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[149,1] & people_mutated$highest_education == C_diff_education_proportion[149,2])
+C_diff_education_proportion[150,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[150,1] & people_mutated$highest_education == C_diff_education_proportion[150,2])
+C_diff_education_proportion[151,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[151,1] & people_mutated$highest_education == C_diff_education_proportion[151,2])
+C_diff_education_proportion[152,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[152,1] & people_mutated$highest_education == C_diff_education_proportion[152,2])
+C_diff_education_proportion[153,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[153,1] & people_mutated$highest_education == C_diff_education_proportion[153,2])
+C_diff_education_proportion[154,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[154,1] & people_mutated$highest_education == C_diff_education_proportion[154,2])
+C_diff_education_proportion[155,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[155,1] & people_mutated$highest_education == C_diff_education_proportion[155,2])
+C_diff_education_proportion[156,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[156,1] & people_mutated$highest_education == C_diff_education_proportion[156,2])
+C_diff_education_proportion[157,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[157,1] & people_mutated$highest_education == C_diff_education_proportion[157,2])
+C_diff_education_proportion[158,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[158,1] & people_mutated$highest_education == C_diff_education_proportion[158,2])
+C_diff_education_proportion[159,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[159,1] & people_mutated$highest_education == C_diff_education_proportion[159,2])
+C_diff_education_proportion[160,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[160,1] & people_mutated$highest_education == C_diff_education_proportion[160,2])
+C_diff_education_proportion[161,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[161,1] & people_mutated$highest_education == C_diff_education_proportion[161,2])
+C_diff_education_proportion[162,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[162,1] & people_mutated$highest_education == C_diff_education_proportion[162,2])
+C_diff_education_proportion[163,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[163,1] & people_mutated$highest_education == C_diff_education_proportion[163,2])
+C_diff_education_proportion[164,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[164,1] & people_mutated$highest_education == C_diff_education_proportion[164,2])
+C_diff_education_proportion[165,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[165,1] & people_mutated$highest_education == C_diff_education_proportion[165,2])
+C_diff_education_proportion[166,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[166,1] & people_mutated$highest_education == C_diff_education_proportion[166,2])
+C_diff_education_proportion[167,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[167,1] & people_mutated$highest_education == C_diff_education_proportion[167,2])
+C_diff_education_proportion[168,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[168,1] & people_mutated$highest_education == C_diff_education_proportion[168,2])
+C_diff_education_proportion[169,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[169,1] & people_mutated$highest_education == C_diff_education_proportion[169,2])
+C_diff_education_proportion[170,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[170,1] & people_mutated$highest_education == C_diff_education_proportion[170,2])
+C_diff_education_proportion[171,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[171,1] & people_mutated$highest_education == C_diff_education_proportion[171,2])
+C_diff_education_proportion[172,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[172,1] & people_mutated$highest_education == C_diff_education_proportion[172,2])
+C_diff_education_proportion[173,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[173,1] & people_mutated$highest_education == C_diff_education_proportion[173,2])
+C_diff_education_proportion[174,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[174,1] & people_mutated$highest_education == C_diff_education_proportion[174,2])
+C_diff_education_proportion[175,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[175,1] & people_mutated$highest_education == C_diff_education_proportion[175,2])
+C_diff_education_proportion[176,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[176,1] & people_mutated$highest_education == C_diff_education_proportion[176,2])
+C_diff_education_proportion[177,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[177,1] & people_mutated$highest_education == C_diff_education_proportion[177,2])
+C_diff_education_proportion[178,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[178,1] & people_mutated$highest_education == C_diff_education_proportion[178,2])
+C_diff_education_proportion[179,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[179,1] & people_mutated$highest_education == C_diff_education_proportion[179,2])
+C_diff_education_proportion[180,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[180,1] & people_mutated$highest_education == C_diff_education_proportion[180,2])
+C_diff_education_proportion[181,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[181,1] & people_mutated$highest_education == C_diff_education_proportion[181,2])
+C_diff_education_proportion[182,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[182,1] & people_mutated$highest_education == C_diff_education_proportion[182,2])
+C_diff_education_proportion[183,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[183,1] & people_mutated$highest_education == C_diff_education_proportion[183,2])
+C_diff_education_proportion[184,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[184,1] & people_mutated$highest_education == C_diff_education_proportion[184,2])
+C_diff_education_proportion[185,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[185,1] & people_mutated$highest_education == C_diff_education_proportion[185,2])
+C_diff_education_proportion[186,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[186,1] & people_mutated$highest_education == C_diff_education_proportion[186,2])
+C_diff_education_proportion[187,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[187,1] & people_mutated$highest_education == C_diff_education_proportion[187,2])
+C_diff_education_proportion[188,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[188,1] & people_mutated$highest_education == C_diff_education_proportion[188,2])
+C_diff_education_proportion[189,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[189,1] & people_mutated$highest_education == C_diff_education_proportion[189,2])
+C_diff_education_proportion[190,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[190,1] & people_mutated$highest_education == C_diff_education_proportion[190,2])
+C_diff_education_proportion[191,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[191,1] & people_mutated$highest_education == C_diff_education_proportion[191,2])
+C_diff_education_proportion[192,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[192,1] & people_mutated$highest_education == C_diff_education_proportion[192,2])
+C_diff_education_proportion[193,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[193,1] & people_mutated$highest_education == C_diff_education_proportion[193,2])
+C_diff_education_proportion[194,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[194,1] & people_mutated$highest_education == C_diff_education_proportion[194,2])
+C_diff_education_proportion[195,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[195,1] & people_mutated$highest_education == C_diff_education_proportion[195,2])
+C_diff_education_proportion[196,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[196,1] & people_mutated$highest_education == C_diff_education_proportion[196,2])
+C_diff_education_proportion[197,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[197,1] & people_mutated$highest_education == C_diff_education_proportion[197,2])
+C_diff_education_proportion[198,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[198,1] & people_mutated$highest_education == C_diff_education_proportion[198,2])
+C_diff_education_proportion[199,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[199,1] & people_mutated$highest_education == C_diff_education_proportion[199,2])
+C_diff_education_proportion[200,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[200,1] & people_mutated$highest_education == C_diff_education_proportion[200,2])
+C_diff_education_proportion[201,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[201,1] & people_mutated$highest_education == C_diff_education_proportion[201,2])
+C_diff_education_proportion[202,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[202,1] & people_mutated$highest_education == C_diff_education_proportion[202,2])
+C_diff_education_proportion[203,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[203,1] & people_mutated$highest_education == C_diff_education_proportion[203,2])
+C_diff_education_proportion[204,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[204,1] & people_mutated$highest_education == C_diff_education_proportion[204,2])
+C_diff_education_proportion[205,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[205,1] & people_mutated$highest_education == C_diff_education_proportion[205,2])
+C_diff_education_proportion[206,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[206,1] & people_mutated$highest_education == C_diff_education_proportion[206,2])
+C_diff_education_proportion[207,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[207,1] & people_mutated$highest_education == C_diff_education_proportion[207,2])
+C_diff_education_proportion[208,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[208,1] & people_mutated$highest_education == C_diff_education_proportion[208,2])
+C_diff_education_proportion[209,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[209,1] & people_mutated$highest_education == C_diff_education_proportion[209,2])
+C_diff_education_proportion[210,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[210,1] & people_mutated$highest_education == C_diff_education_proportion[210,2])
+C_diff_education_proportion[211,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[211,1] & people_mutated$highest_education == C_diff_education_proportion[211,2])
+C_diff_education_proportion[212,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[212,1] & people_mutated$highest_education == C_diff_education_proportion[212,2])
+C_diff_education_proportion[213,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[213,1] & people_mutated$highest_education == C_diff_education_proportion[213,2])
+C_diff_education_proportion[214,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[214,1] & people_mutated$highest_education == C_diff_education_proportion[214,2])
+C_diff_education_proportion[215,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[215,1] & people_mutated$highest_education == C_diff_education_proportion[215,2])
+C_diff_education_proportion[216,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[216,1] & people_mutated$highest_education == C_diff_education_proportion[216,2])
+C_diff_education_proportion[217,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[217,1] & people_mutated$highest_education == C_diff_education_proportion[217,2])
+C_diff_education_proportion[218,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[218,1] & people_mutated$highest_education == C_diff_education_proportion[218,2])
+C_diff_education_proportion[219,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[219,1] & people_mutated$highest_education == C_diff_education_proportion[219,2])
+C_diff_education_proportion[220,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[220,1] & people_mutated$highest_education == C_diff_education_proportion[220,2])
+C_diff_education_proportion[221,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[221,1] & people_mutated$highest_education == C_diff_education_proportion[221,2])
+C_diff_education_proportion[222,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[222,1] & people_mutated$highest_education == C_diff_education_proportion[222,2])
+C_diff_education_proportion[223,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[223,1] & people_mutated$highest_education == C_diff_education_proportion[223,2])
+C_diff_education_proportion[224,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[224,1] & people_mutated$highest_education == C_diff_education_proportion[224,2])
+C_diff_education_proportion[225,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[225,1] & people_mutated$highest_education == C_diff_education_proportion[225,2])
+C_diff_education_proportion[226,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[226,1] & people_mutated$highest_education == C_diff_education_proportion[226,2])
+C_diff_education_proportion[227,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[227,1] & people_mutated$highest_education == C_diff_education_proportion[227,2])
+C_diff_education_proportion[228,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[228,1] & people_mutated$highest_education == C_diff_education_proportion[228,2])
+C_diff_education_proportion[229,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[229,1] & people_mutated$highest_education == C_diff_education_proportion[229,2])
+C_diff_education_proportion[230,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[230,1] & people_mutated$highest_education == C_diff_education_proportion[230,2])
+C_diff_education_proportion[231,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[231,1] & people_mutated$highest_education == C_diff_education_proportion[231,2])
+C_diff_education_proportion[232,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[232,1] & people_mutated$highest_education == C_diff_education_proportion[232,2])
+C_diff_education_proportion[233,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[233,1] & people_mutated$highest_education == C_diff_education_proportion[233,2])
+C_diff_education_proportion[234,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[234,1] & people_mutated$highest_education == C_diff_education_proportion[234,2])
+C_diff_education_proportion[235,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[235,1] & people_mutated$highest_education == C_diff_education_proportion[235,2])
+C_diff_education_proportion[236,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[236,1] & people_mutated$highest_education == C_diff_education_proportion[236,2])
+C_diff_education_proportion[237,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[237,1] & people_mutated$highest_education == C_diff_education_proportion[237,2])
+C_diff_education_proportion[238,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[238,1] & people_mutated$highest_education == C_diff_education_proportion[238,2])
+C_diff_education_proportion[239,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[239,1] & people_mutated$highest_education == C_diff_education_proportion[239,2])
+C_diff_education_proportion[240,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[240,1] & people_mutated$highest_education == C_diff_education_proportion[240,2])
+C_diff_education_proportion[241,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[241,1] & people_mutated$highest_education == C_diff_education_proportion[241,2])
+C_diff_education_proportion[242,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[242,1] & people_mutated$highest_education == C_diff_education_proportion[242,2])
+C_diff_education_proportion[243,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[243,1] & people_mutated$highest_education == C_diff_education_proportion[243,2])
+C_diff_education_proportion[244,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[244,1] & people_mutated$highest_education == C_diff_education_proportion[244,2])
+C_diff_education_proportion[245,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[245,1] & people_mutated$highest_education == C_diff_education_proportion[245,2])
+C_diff_education_proportion[246,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[246,1] & people_mutated$highest_education == C_diff_education_proportion[246,2])
+C_diff_education_proportion[247,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[247,1] & people_mutated$highest_education == C_diff_education_proportion[247,2])
+C_diff_education_proportion[248,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[248,1] & people_mutated$highest_education == C_diff_education_proportion[248,2])
+C_diff_education_proportion[249,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[249,1] & people_mutated$highest_education == C_diff_education_proportion[249,2])
+C_diff_education_proportion[250,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[250,1] & people_mutated$highest_education == C_diff_education_proportion[250,2])
+C_diff_education_proportion[251,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[251,1] & people_mutated$highest_education == C_diff_education_proportion[251,2])
+C_diff_education_proportion[252,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[252,1] & people_mutated$highest_education == C_diff_education_proportion[252,2])
+C_diff_education_proportion[253,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[253,1] & people_mutated$highest_education == C_diff_education_proportion[253,2])
+C_diff_education_proportion[254,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[254,1] & people_mutated$highest_education == C_diff_education_proportion[254,2])
+C_diff_education_proportion[255,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[255,1] & people_mutated$highest_education == C_diff_education_proportion[255,2])
+C_diff_education_proportion[256,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[256,1] & people_mutated$highest_education == C_diff_education_proportion[256,2])
+C_diff_education_proportion[257,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[257,1] & people_mutated$highest_education == C_diff_education_proportion[257,2])
+C_diff_education_proportion[258,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[258,1] & people_mutated$highest_education == C_diff_education_proportion[258,2])
+C_diff_education_proportion[259,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[259,1] & people_mutated$highest_education == C_diff_education_proportion[259,2])
+C_diff_education_proportion[260,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[260,1] & people_mutated$highest_education == C_diff_education_proportion[260,2])
+C_diff_education_proportion[261,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[261,1] & people_mutated$highest_education == C_diff_education_proportion[261,2])
+C_diff_education_proportion[262,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[262,1] & people_mutated$highest_education == C_diff_education_proportion[262,2])
+C_diff_education_proportion[263,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[263,1] & people_mutated$highest_education == C_diff_education_proportion[263,2])
+C_diff_education_proportion[264,6]<- sum(people_mutated$transpo_mode == C_diff_education_proportion[264,1] & people_mutated$highest_education == C_diff_education_proportion[264,2])
+
+C_diff_education_proportion$prop<- C_diff_education_proportion$Freq/C_diff_education_proportion$total
+C_diff_education_proportion<- C_diff_education_proportion[!(C_diff_education_proportion$prop == -Inf),]
+
+
+C_diff_education_data3<- C_diff_education_proportion %>%
+  mutate(highest_education = case_when(
+    highest_education == "Regular high school diploma" ~ "[1] High School Diploma",
+    highest_education == "GED or alternative credential" ~ "[2] GED",
+    highest_education == "Some college, but less than 1 year" ~ "[3] College <1 Year",
+    highest_education == "1 or more years of college credit, no degree" ~ "[4] Some College, No Degree",
+    highest_education == "Associate's degree" ~ "[5] Associate's Degree",
+    highest_education == "Bachelor's degree" ~ "[6] Bachelor's Degree",
+    highest_education == "Professional degree beyond a bachelor's degree" ~ "[7] Prof Degree",
+    highest_education == "Master's degree" ~ "[8] Master's Degree",
+    highest_education == "Doctorate degree" ~ "[9] Doctorate Degree"
+))
+
+#Format some of the entries that will show up as labels
+#to make them shorter
+C_diff_education_data3$transpo_mode<- str_replace_all(C_diff_education_data3$transpo_mode,"(carro publico in Puerto Rico)","")
+C_diff_education_data3$transpo_mode<- str_replace_all(C_diff_education_data3$transpo_mode,"[[:punct:]]","")
+
+#Remove those whose highest level of education is below high school.
+#The reason I do this is because, the first time I visualized the
+#heatmap, there were no instances where those levels of education
+#used a mode that was different from what the "expected" values
+#of the chi-square test were. So, while the results were statistically
+#significant at the 95% level, they did not add any new information
+#in the context of the heatmap below.
+
+C_diff_education_data3<- na.omit(C_diff_education_data3)
+```
+
+The code below shows each of the relationships presented in the previous heatmap between level of education and mode of commute, but this one shows each difference between observed and expected values as a percentage of the total respondents in that group. For example, there were a total of 15 MA residents whose highest level of education is 1 or more years of college credit, but no degree, and who reported biking to work. The difference between observed and expected is -14.7, which is 98% less than what was expected. These differences are not large in absolute terms and thus would not show up on the first heatmap which was set to show differences of up to 200 residents, but they show up here. A drawback of this heatmap now, though, is that differences of large numbers, if they are in a category with also a large number of observations (e.g., cars, trucks, or vans), they hardly show up at all on the proportions heatmap.
+
+```{r plot both heatmaps, fig.width=15, fig.height=5}
+
+C_diff_education_heatmap_prop<- ggplot(C_diff_education_data3,
+                                  aes(x = transpo_mode,
+                                      y = highest_education,
+                                      fill = prop,
+                                      color = stat_sig)) +
+  geom_tile() +
+  theme(legend.key.size = unit(.7, "cm"),
+        axis.text.x = element_text(angle = 25, hjust = 1, size = 13)) +
+  scale_fill_gradient2(name = "Difference between \nObserved and \nExpected Values \nas Proportion of \nTotal in Category",
+                       midpoint = 0,
+                       low = "blue",
+                       mid = "white",
+                       high = "orange",
+                       space = "Lab",
+                       breaks = seq(-4,2, by = 1),
+                       labels = c("-400%","-300%","-200%","-100%","0%","100%","200%")) +
+  scale_color_manual(name = "Statistically Sig. \nat 95% conf.level", values = c("grey", "red")) +
+  scale_x_discrete(name = "Commute Mode of Transportation") +
+  scale_y_discrete(name = "Highest Level of Education") +
+  ggtitle(label = "Proportional Differences Heatmap")
+  
+  
+C_diff_education_heatmap_prop
+```
+
+Perhaps the best thing to do is display both the absolute numbers and proportional heatmaps next to each other so the viewer can gather as much information as they may need about the relationships between commute modes of transporation and levels of education in MA. Some notable takeaways for me are that MA residents with a Bachelor's degree as their highest level of education drive less than would be expected, and those with a high school diploma drive to work more than expected. The graph below may suggest that the people with a Bachelor's degree who are not driving to work are instead taking the subway, and vice versa for those with a high school diploma. With regards to the proportions heatmap, the bottom half (Associate's degree or lower) seem to have a lot larger proportional differences than those with a Bachelor's degree and higher. I believe this is largely because in MA, the majority of adults have at least a Bachelor's degree, so differences of the same magnitude would be larger proportionally for those with an Associate's or below.
+
+```{r plot both, fig.width=15, fig.height=14}
+#Jessica Tang told me about the gridExtra package and how to plot graphs beside each
+#other, very neat!
+grid.arrange(C_diff_education_heatmap, C_diff_education_heatmap_prop, nrow = 2, ncol = 1)
+
 
 ```
