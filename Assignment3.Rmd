@@ -1,7 +1,7 @@
 ---
 title: "Assignment3_Quant"
 author: "Megan Willis-Jackson"
-date: "9/19/2020"
+date: "9/24/2020"
 output: 
   html_document:
     toc: yes
