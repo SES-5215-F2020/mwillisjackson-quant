@@ -1,0 +1,91 @@
+---
+title: "Assignment4"
+author: "Megan Willis-Jackson"
+date: "9/28/2020"
+output: 
+  html_document: 
+    toc: yes
+    toc_float: yes
+---
+
+# Load Libraries
+
+```{r regression, message=F}
+library(tidyverse)
+
+```
+
+# Clean Data
+
+```{r clean data}
+people<- read.csv("people.csv")
+people<- people[,2:7]
+education<- unique(people$highest_education)
+education
+people_mutated<- people %>%
+  mutate(education_binary = case_when(
+    highest_education == "Master's degree" ~ "Post HS",
+    highest_education == "Associate's degree" ~ "Post HS",
+    highest_education == "Regular high school deploma" ~ "HS/equivalent or less",
+    highest_education == "Bachelor's degree" ~ "Post HS",
+    highest_education == "1 or more years of college credit, no degree" ~ "Post HS",
+    highest_education == "Grade 11" ~ "HS/equivalent or less",
+    highest_education == "GED or alternative credential" ~ "HS/equivalent or less",
+    highest_education == "Some college, but less than 1 year" ~ "HS/equivalent or less",
+    highest_education == "Professional degree beyond a bachelor's degree" ~ "Post HS",
+    highest_education == "No schooling completed" ~ "HS/equivalent or less",
+    highest_education == "Grade 10" ~ "HS/equivalent or less",
+    highest_education == "Doctorate degree" ~ "Post HS",
+    highest_education == "Grade 7" ~ "HS/equivalent or less",
+    highest_education == "12th grade - no diploma" ~ "HS/equivalent or less",
+    highest_education == "Grade 9" ~ "HS/equivalent or less",
+    highest_education == "Grade 8" ~ "HS/equivalent or less",
+    highest_education == "Grade 6" ~ "HS/equivalent or less",
+    highest_education == "Grade 3" ~ "HS/equivalent or less",
+    highest_education == "Grade 4" ~ "HS/equivalent or less",
+    highest_education == "Grade 5" ~ "HS/equivalent or less",
+    highest_education == "Grade 2" ~ "HS/equivalent or less",
+    highest_education == "Grade 1" ~ "HS/equivalent or less",
+    highest_education == "Kindergarten" ~ "HS/equivalent or less",
+    highest_education == "Nursery school, preschool" ~ "HS/equivalent or less",
+    highest_education == "Regular high school diploma" ~ "HS/equivalent or less"
+  ))
+
+people_mutated$transpo_mode<- str_replace_all(people_mutated$transpo_mode, "Car, truck, or van", "1Car, truck, or van")
+
+```
+
+# Run Regression
+
+Below I run the regression to determine how one continuous variable, time spent traveling to work, is affected by two categorical variables, mode of transportation and whether the individual has an education higher than a high school degree or not, and two coninuous variables, household income and monthly housing cost.
+
+```{r run the regression}
+options(scipen = 999)
+model <- lm(travel_time ~ transpo_mode + education_binary + household_income + monthly_housing_total, 
+            data = people_mutated)
+
+summary(model)
+
+```
+
+# Interpretation of Results
+
+The model I created does not fit the data very well. It has a multiple R-squared value of 0.1166, meaning just under 12% of the variation in travel times is explained by the independent variables in my model. The model also suggests with an intercept of about 25 that, if a MA resident drives to work, has no education post-HS, has a $0 income and pays $0 in monthly housing costs, it will take them about 25 minutes to arrive. This finding does not really make sense in this case - commuting time to a job at which you don't get paid (interns?) - but it's a finding of the model.
+
+## Mode of Transportation
+
+For mode of transportation, each mode is compared to how commute time would be while driving a car, truck, or van. The results above indicate that the coefficients for every mode of transportation except for by motorcycle are statistically significant at the 95% confidence level because they all have p-values of less than 0.05. 
+
+The model suggests that, holding all other variables constant, if a person takes the railroad to work, they will commute about 37 minutes longer than if they drove. If they take the ferry, holding all other variables constant, their commute will be on average 23 minutes longer. If the commuter takes a bus, subway, or streetcar, their commute on average will be between 12 and 14 minutes longer. For modes that are associated with shorter commutes, the model suggests that, holding all other variables constant, bicyclists and people taking taxis have a commute 6-7 minutes shorter on average than people driving their own car, truck, or van, and if a person walks to work, their commute is on average about 13 minutes shorter than drivers. There are likely other variable interactions going on here that have yet to be examined. For example, people taking the railroad likely live farther from their jobs than many of the people walking, so the walkers would likely have a shorter commute when compared to the railroad passengers irrespective of the mode; distance from occupation would be a useful variable to include.
+
+## Education Level
+
+I transformed the education level into a binary variable with the two options being a person has an education level up to a high school diploma, or any education after high school. The model suggests that commuters with education post-HS will commute about 3 minutes more on average than a commuter with a HS diploma or less, holding all other variables constant. This finding is statistically significant at the 95% confidence level.
+
+## Household Income
+
+The model suggests that for every dollar increase in a MA resident's household's yearly income, they will commute an average of 0.000009 minutes longer, holding all other variables constant. This figure is tiny and not practically useful, but it suggests that the higher the yearly income, the longer the commute. This coefficient is statistically significant at the 95% confidence level.
+
+## Monthly Housing Cost
+
+The model suggests that for every dollar increase in a MA resident's monthly cost of housing, they will commute an average of 0.0009 minutes longer. This coefficient is statistically significant at the 95% confidence level. Again, this finding is not practically useful given it is such a small number (who can even measure the tens-thousandths of a second? Maybe at the Olympics?), but it also suggests that the higher the housing costs, the longer the commute. There may also be an interaction between household income and monthly housing cost that should be examined for multicollinearity. 
