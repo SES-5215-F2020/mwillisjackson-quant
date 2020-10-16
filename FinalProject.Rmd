@@ -1,0 +1,602 @@
+---
+title: "FinalProject"
+author: "Megan Willis-Jackson"
+date: "10/13/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Cost of Housing in Massachusetts
+
+```{r load libraries, echo=F, message=F}
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(naniar)
+library(gridExtra)
+library(jtools)
+library(interactions)
+library(knitr)
+```
+
+
+```{r clean data, echo=F, message=F}
+people<- read.csv("people.csv")
+people<- people[,2:7]
+education<- unique(people$highest_education)
+people_mutated<- people %>%
+  mutate(education_binary = case_when(
+    highest_education == "Master's degree" ~ "Post HS",
+    highest_education == "Associate's degree" ~ "Post HS",
+    highest_education == "Regular high school deploma" ~ "HS/equivalent or less",
+    highest_education == "Bachelor's degree" ~ "Post HS",
+    highest_education == "1 or more years of college credit, no degree" ~ "Post HS",
+    highest_education == "Grade 11" ~ "HS/equivalent or less",
+    highest_education == "GED or alternative credential" ~ "HS/equivalent or less",
+    highest_education == "Some college, but less than 1 year" ~ "HS/equivalent or less",
+    highest_education == "Professional degree beyond a bachelor's degree" ~ "Post HS",
+    highest_education == "No schooling completed" ~ "HS/equivalent or less",
+    highest_education == "Grade 10" ~ "HS/equivalent or less",
+    highest_education == "Doctorate degree" ~ "Post HS",
+    highest_education == "Grade 7" ~ "HS/equivalent or less",
+    highest_education == "12th grade - no diploma" ~ "HS/equivalent or less",
+    highest_education == "Grade 9" ~ "HS/equivalent or less",
+    highest_education == "Grade 8" ~ "HS/equivalent or less",
+    highest_education == "Grade 6" ~ "HS/equivalent or less",
+    highest_education == "Grade 3" ~ "HS/equivalent or less",
+    highest_education == "Grade 4" ~ "HS/equivalent or less",
+    highest_education == "Grade 5" ~ "HS/equivalent or less",
+    highest_education == "Grade 2" ~ "HS/equivalent or less",
+    highest_education == "Grade 1" ~ "HS/equivalent or less",
+    highest_education == "Kindergarten" ~ "HS/equivalent or less",
+    highest_education == "Nursery school, preschool" ~ "HS/equivalent or less",
+    highest_education == "Regular high school diploma" ~ "HS/equivalent or less"
+  ))
+
+```
+
+## Introduction
+
+The research question I will be exploring is how housing prices are affected by the following variables:
+
+1. Mode of transportation (cateogrical)
+2. Educational attainment (categorical)
+3. Commute time to work (continuous)
+4. Monthly household income (continuous)
+
+This research question is important to understand how various factors impact how much a person will spend on housing. It will be interesting to theorize about tradeoffs that may or may not be supported by the data, for example if a person makes a choice to take a longer commute in order to pay less in rent, or if they will pay more to be within walking distance of their job as opposed to needing to drive.
+
+### Hypothesis
+
+The hypothesis that I will test is that the shorter an MA resident's commute, the more they pay in rent. I will also test the hypothesis that people who commute via driving tend to pay less in rent than those who use other modes. I will test whether there is a positive correlation between monthly income and housing costs, as well as whether any relationship exists between educational attainment and housing costs.
+
+## Data
+
+My dataset is drawn from the 2018 ACS and includes all MA residents who a) make more than $0 in monthly income, b) pay more than $0 in monthly housing costs, and c) commute longer than 0 minutes to work.
+
+### Data Transformations
+
+My analysis includes the five variables listed above. The housing price variable is a combination of three variables within ACS: rent, first mortgage, and second mortgage. Each individual in the dataset pays either a rent or a mortgage, and those who pay a first mortgage may also pay a second mortgage. Therefore, this variable may be correlated with real estate value, but is a bit more nuanced because a person living in a home worth a certain amount of money may pay less per month than another person living in a home worth less money because the latter may pay a mortgage and a second mortgage, for example.
+
+Education attainment is provided in the ACS as over twenty levels. I have further binned these categories into "High School or Lower," and "Post-High School," as I anticipated this would be the most meaningful divide in terms of differences between the two populations.
+
+### Variable Summary Statistics
+
+Summary statistics for the variables are included below to provide a clearer picture of the sample being examined.
+
+```{r summary stats, echo=F, message=F}
+variables<- data.frame(c("Travel_Time","Household_Income","Housing_Cost"))
+
+mean<- data.frame(c(mean(people_mutated$travel_time), mean(people_mutated$household_income), mean(people_mutated$monthly_housing_total)))
+
+median<- data.frame(c(median(people_mutated$travel_time), median(people_mutated$household_income), median(people_mutated$monthly_housing_total)))
+
+standard_deviation<- data.frame(c(sd(people_mutated$travel_time),sd(people_mutated$household_income),sd(people_mutated$monthly_housing_total)))
+
+low_CI_95<- data.frame(c(1,1,1))
+high_CI_95<- data.frame(c(1,1,1))
+
+IQ_Range<- data.frame(c(IQR(people_mutated$travel_time),IQR(people_mutated$household_income),IQR(people_mutated$monthly_housing_total)))
+
+summary_stats_contvar<- data.frame(c(variables,mean,standard_deviation,low_CI_95,high_CI_95,IQ_Range,median))
+
+colnames(summary_stats_contvar)<- c("variable","mean","standard_deviation","low_CI_95","high_CI_95","IQ_Range","median")
+
+rownames(summary_stats_contvar)<- summary_stats_contvar$variable
+
+summary_stats_contvar<- summary_stats_contvar[,2:7]
+
+summary_stats_contvar[1,3:4]<- t.test(people_mutated$travel_time,conf.level = .95)[["conf.int"]]
+summary_stats_contvar[2,3:4]<- t.test(people_mutated$household_income,conf.level = .95)[["conf.int"]]
+summary_stats_contvar[3,3:4]<- t.test(people_mutated$monthly_housing_total,conf.level = .95)[["conf.int"]]
+
+
+```
+
+```{r histograms - travel time, message=F, echo=F}
+ggplot(people_mutated,
+       aes(x = travel_time)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Travel Time (minutes)") +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 50, y = 4000, size = 4,
+           label = paste("Population mean (95% confidence):",
+                         prettyNum(summary_stats_contvar[1,3], digits = 3),
+                         "to",
+                         prettyNum(summary_stats_contvar[1,4], digits = 3),
+                         "minutes",
+                         "\nSample mean:",
+                         prettyNum(summary_stats_contvar[1,1], digits = 3),
+                         "minutes",
+                         "\nSample median:",
+                         prettyNum(median(people_mutated$travel_time), digits = 3),
+                         "minutes",
+                         "\nSample standard deviation:",
+                         prettyNum(summary_stats_contvar[1,2], digits = 3),
+                         "minutes",
+                         "\nSample interquartile range:",
+                         prettyNum(quantile(people_mutated$travel_time)["25%"], digits = 4),
+                         "to",
+                         prettyNum(quantile(people_mutated$travel_time)["75%"], digits = 4),
+                         "minutes"),
+           hjust = 0, vjust = 1)
+
+```
+
+```{r histogram, household income, message=F, echo=F}
+ggplot(people_mutated,
+       aes(x = household_income)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Household Income",
+                     breaks = seq(0,1500000,by = 250000),
+                     labels = c("$0","$250k","$500k","$750k","$1M","$1.25M","$1.5M")) +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 500000, y = 8000, size = 4,
+           label = paste("Population mean (95% confidence): $",
+                         prettyNum(summary_stats_contvar[2,3], digits = 3, big.mark = ","),
+                         "to $",
+                         prettyNum(summary_stats_contvar[2,4], digits = 3, big.mark = ","),
+                         "\nSample mean: $",
+                         prettyNum(summary_stats_contvar[2,1], digits = 3, big.mark = ","),
+                         "\nSample median: $",
+                         prettyNum(median(people_mutated$household_income), digits = 3, big.mark = ","),
+                         "\nSample standard deviation: $",
+                         prettyNum(summary_stats_contvar[2,2], digits = 3, big.mark = ","),
+                         "\nSample interquartile range: $",
+                         prettyNum(quantile(people_mutated$household_income)["25%"], digits = 4, big.mark = ","),
+                         "to $",
+                         prettyNum(quantile(people_mutated$household_income)["75%"], digits = 4, big.mark = ",")),
+           hjust = 0, vjust = 1)
+```
+
+```{r household cost, message=F, echo=F}
+ggplot(people_mutated,
+       aes(x = monthly_housing_total)) +
+  geom_histogram() +
+  scale_x_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0,8000,by = 1000),
+                     labels = c("$0","$1,000","$2,000","$3,000","$4,000","$5,000","$6,000","$7,000","$8,000")) +
+  scale_y_continuous(name = "Number of MA Residents in Sample") +
+  theme_classic() +
+  annotate("text", x = 3500, y = 6000, size = 4,
+           label = paste("Population mean (95% confidence): $",
+                         prettyNum(summary_stats_contvar[3,3], digits = 3, big.mark = ","),
+                         "to $",
+                         prettyNum(summary_stats_contvar[3,4], digits = 3, big.mark = ","),
+                         "\nSample mean: $",
+                         prettyNum(summary_stats_contvar[3,1], digits = 3, big.mark = ","),
+                         "\nSample median: $",
+                         prettyNum(median(people_mutated$monthly_housing_total), digits = 3, big.mark = ","),
+                         "\nSample standard deviation: $",
+                         prettyNum(summary_stats_contvar[3,2], digits = 3, big.mark = ","),
+                         "\nSample interquartile range: $",
+                         prettyNum(quantile(people_mutated$monthly_housing_total)["25%"], digits = 4, big.mark = ","),
+                         "to $",
+                         prettyNum(quantile(people_mutated$monthly_housing_total)["75%"], digits = 4, big.mark = ",")),
+           hjust = 0, vjust = 1)
+```
+
+```{r categorical variables, message=F, echo = F}
+attach(people_mutated)
+transpo <- unique(transpo_mode)
+transpo
+
+car_truck_van <- t.test(transpo_mode == transpo[1])
+subway <- t.test(transpo_mode == transpo[2])
+walk <- t.test(transpo_mode == transpo[3])
+railroad <- t.test(transpo_mode == transpo[4])
+bus <- t.test(transpo_mode == transpo[5])
+streetcar <- t.test(transpo_mode == transpo[6])
+bicycle <- t.test(transpo_mode == transpo[7])
+other <- t.test(transpo_mode == transpo[8])
+taxi <- t.test(transpo_mode == transpo[9])
+ferry <- t.test(transpo_mode == transpo[10])
+motorcycle <- t.test(transpo_mode == transpo[11])
+
+shares_transpo <- tibble(transpo = c("Car, Truck, or Van",
+                             "Subway or elevated train",
+                             "Walking",
+                             "Railroad",
+                             "Bus",
+                             "Streetcar or trolley",
+                             "Bicycle",
+                             "Other mode",
+                             "Taxi",
+                             "Ferryboat",
+                             "Motorcycle"),
+                 `Share` = c(car_truck_van$estimate,
+                             subway$estimate,
+                             walk$estimate,
+                             railroad$estimate,
+                             bus$estimate,
+                             streetcar$estimate,
+                             bicycle$estimate,
+                             other$estimate,
+                             taxi$estimate,
+                             ferry$estimate,
+                             motorcycle$estimate),
+                 Low = c(car_truck_van$conf.int[1],
+                             subway$conf.int[1],
+                             walk$conf.int[1],
+                             railroad$conf.int[1],
+                             bus$conf.int[1],
+                             streetcar$conf.int[1],
+                             bicycle$conf.int[1],
+                             other$conf.int[1],
+                             taxi$conf.int[1],
+                             ferry$conf.int[1],
+                             motorcycle$conf.int[1]),
+                 High = c(car_truck_van$conf.int[2],
+                             subway$conf.int[2],
+                             walk$conf.int[2],
+                             railroad$conf.int[2],
+                             bus$conf.int[2],
+                             streetcar$conf.int[2],
+                             bicycle$conf.int[2],
+                             other$conf.int[2],
+                             taxi$conf.int[2],
+                             ferry$conf.int[2],
+                             motorcycle$conf.int[2]))
+
+paste("Of the 11 various modes of transport that MA residents use for their commute, the one with the highest percentage of MA residents in our sample is Car, Truck, or Van, which about",
+      prettyNum(shares_transpo[1,2]*100, digits = 2),
+      "percent of the sample population uses. We can say with 95% confidence that the true percent of MA residents who use a car, truck, or van for their commute is between",
+      prettyNum(shares_transpo[1,3]*100, digits = 3),
+      "and",
+      prettyNum(shares_transpo[1,4]*100, digits = 3),
+      "percent.")
+
+
+```
+
+## Highest Level of Education
+
+```{r education level attainment, message=F, echo=F}
+education<- unique(highest_education)
+
+master<- t.test(highest_education == education[1])
+associate<- t.test(highest_education == education[2])
+reg_hs<- t.test(highest_education == education[3])
+college_deg<- t.test(highest_education == education[4])
+college_1yrnodeg<- t.test(highest_education == education[5])
+grade11<- t.test(highest_education == education[6])
+ged<- t.test(highest_education == education[7])
+college_less1yr<- t.test(highest_education == education[8])
+prof_deg<- t.test(highest_education == education[9])
+none<- t.test(highest_education == education[10])
+grade10<- t.test(highest_education == education[11])
+doctorate<- t.test(highest_education == education[12])
+grade7<- t.test(highest_education == education[13])
+grade12_nodip<- t.test(highest_education == education[14])
+grade9<- t.test(highest_education == education[15])
+grade8<- t.test(highest_education ==  education[16])
+grade6<- t.test(highest_education == education[17])
+grade3<- t.test(highest_education == education[18])
+grade4<- t.test(highest_education == education[19])
+grade5<- t.test(highest_education == education[20])
+grade2<- t.test(highest_education == education[21])
+grade1<- t.test(highest_education == education[22])
+kindergarten<- t.test(highest_education == education[23])
+preschool<- t.test(highest_education == education[24])
+
+shares_education <- tibble(education = c("Master's degree",
+                                         "Associate's degree",
+                                         "Regular high school diploma",
+                                         "Bachelor's degree",
+                                         "Some years of college credit, no degree",
+                                         "Grade 11",
+                                         "GED or alternative credential",
+                                         "Some college, but less than 1 year",
+                                         "Professional degree beyond a bachelor's degree",
+                                         "No schooling completed",
+                                         "Grade 10",
+                                         "Doctorate degree",
+                                         "Grade 7",
+                                         "12th grade-no diploma",
+                                         "Grade 9",
+                                         "Grade 8",
+                                         "Grade 6",
+                                         "Grade 3",
+                                         "Grade 4",
+                                         "Grade 5",
+                                         "Grade 2",
+                                         "Grade 1",
+                                         "Kindergarten",
+                                         "Nursery school, preschool"),
+                           `Share` = c(master$estimate,
+                                       associate$estimate,
+                                       reg_hs$estimate,
+                                       college_deg$estimate,
+                                       college_1yrnodeg$estimate,
+                                       grade11$estimate,
+                                       ged$estimate,
+                                       college_less1yr$estimate,
+                                       prof_deg$estimate,
+                                       none$estimate,
+                                       grade10$estimate,
+                                       doctorate$estimate,
+                                       grade7$estimate, 
+                                       grade12_nodip$estimate,
+                                       grade9$estimate,
+                                       grade8$estimate,
+                                       grade6$estimate,
+                                       grade3$estimate,
+                                       grade4$estimate,
+                                       grade5$estimate,
+                                       grade2$estimate,
+                                       grade1$estimate,
+                                       kindergarten$estimate,
+                                       preschool$estimate),
+                           Low = c(master$conf.int[1],
+                                       associate$conf.int[1],
+                                       reg_hs$conf.int[1],
+                                       college_deg$conf.int[1],
+                                       college_1yrnodeg$conf.int[1],
+                                       grade11$conf.int[1],
+                                       ged$conf.int[1],
+                                       college_less1yr$conf.int[1],
+                                       prof_deg$conf.int[1],
+                                       none$conf.int[1],
+                                       grade10$conf.int[1],
+                                       doctorate$conf.int[1],
+                                       grade7$conf.int[1], 
+                                       grade12_nodip$conf.int[1],
+                                       grade9$conf.int[1],
+                                       grade8$conf.int[1],
+                                       grade6$conf.int[1],
+                                       grade3$conf.int[1],
+                                       grade4$conf.int[1],
+                                       grade5$conf.int[1],
+                                       grade2$conf.int[1],
+                                       grade1$conf.int[1],
+                                       kindergarten$conf.int[1],
+                                       preschool$conf.int[1]),
+                           High = c(master$conf.int[2],
+                                       associate$conf.int[2],
+                                       reg_hs$conf.int[2],
+                                       college_deg$conf.int[2],
+                                       college_1yrnodeg$conf.int[2],
+                                       grade11$conf.int[2],
+                                       ged$conf.int[2],
+                                       college_less1yr$conf.int[2],
+                                       prof_deg$conf.int[2],
+                                       none$conf.int[2],
+                                       grade10$conf.int[2],
+                                       doctorate$conf.int[2],
+                                       grade7$conf.int[2], 
+                                       grade12_nodip$conf.int[2],
+                                       grade9$conf.int[2],
+                                       grade8$conf.int[2],
+                                       grade6$conf.int[2],
+                                       grade3$conf.int[2],
+                                       grade4$conf.int[2],
+                                       grade5$conf.int[2],
+                                       grade2$conf.int[2],
+                                       grade1$conf.int[2],
+                                       kindergarten$conf.int[2],
+                                       preschool$conf.int[2]))
+paste("Of the 24 various levels of education, the one with the highest percentage of MA residents in our sample is Bachelor's Degree, which about",
+      prettyNum(shares_education[4,2]*100, digits = 2),
+      "percent of the sample population holds. We can say with 95% confidence that the true percent of MA residents who hold a Bachelor's Degree as their highest level of education is between",
+      prettyNum(shares_education[4,3]*100, digits = 3),
+      "and",
+      prettyNum(shares_education[4,4]*100, digits = 3),
+      "percent.")
+```
+
+```{r visualize categorical variables - transportation, message=F, echo=F}
+ggplot(shares_transpo,
+       aes(x = transpo, y = Share, ymin = Low, ymax = High)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(width = 0.5) +
+  theme_light() +
+  scale_x_discrete(name = "Commute Mode of Transportation") +
+  scale_y_continuous(name = "Percent of Population", labels = c("0%", "20%", "40%", "60%", "80%")) +
+    theme_classic()+
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) 
+
+```
+
+```{r visualize categorical variables - education, message=F, echo=F}
+ggplot(shares_education,
+       aes(x = education, y = Share, ymin = Low, ymax = High)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(width = 0.5) +
+  theme_light() +
+  scale_x_discrete(name = "Highest Level of Education") +
+  scale_y_continuous(name = "Percent of Population", labels = c("0%", "10%", "20%", "30%")) +
+    theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+
+
+## Methods
+
+I used a variety of statistical tests to explore my hypothesis. These tests included two sample t-tests, correlations, chi-square tests, and linear regressions. For each test, a p-value of less than 0.05 indicated a relationship at the 95% confidence level, which I took as strong enough evidence that I should not reject my alternative hypothesis. The linear regression model analyzes the data hollistically as opposed to relationships between just two variables, so this is likely the most useful model to predict relationships between my selected variables. As each of the t-tests and correlations I examined yielded a p-value of less than 0.05, I feel it is appropriate to include each of them in the linear regression. Below, I present some of the t-tests and the linear regression I performed to paint a picture of housing prices in MA.
+
+
+### Relationship between Monthly Housing Cost and Level of Education
+
+We can be 95% confident that MA residents with some form of higher education pay, on average, between $503 to $549 more per month for housing than MA residents without any form of higher education. 
+
+```{r commute and education, echo=F, message=F, fig.align='center'}
+attach(people_mutated)
+difference1<- t.test(travel_time~ education_binary == "Post HS", data = people_mutated)
+difference1
+
+ggplot(people_mutated,
+       aes(x = education_binary,
+           y = travel_time)) +
+  geom_violin() +
+  theme_economist() +
+  scale_x_discrete(name = "Does the commuter have education beyond a high school degree?",
+                   labels = c("No","Yes")) +
+  scale_y_continuous(name = "Travel Time (minutes)") +
+  annotate(geom = "text", x = 1.5, y = 100, size = 3,
+           label = paste("Difference in means\n(95% confidence):\n",
+                         prettyNum(abs(difference1$conf.int[2]), 
+                                   digits = 0), " minutes to ",
+                         prettyNum(abs(difference1$conf.int[1]), 
+                                   digits = 0),
+                         " minutes",
+                         sep = "")) +
+  annotate(geom = "text", x = 1, y = difference1$estimate[1], size = 3,
+           label = paste("Mean (95% confidence):\n",
+                         prettyNum(difference1$estimate[1], digits = 0),
+                         "minutes")) +
+  annotate(geom = "text", x = 2, y = difference1$estimate[2], size = 3,
+           label = paste("\nMean (95% confidence):\n",
+                         prettyNum(difference1$estimate[2], digits = 0),
+                         "minutes"))
+```
+
+We can be 95% confident that MA residents with some form of higher education pay, on average, between $503 to $549 more per month for housing than MA residents without any form of higher education. 
+
+```{r housing and education, echo=F, fig.align='center', message=FALSE}
+difference3<- t.test(monthly_housing_total ~ education_binary == "Post HS")
+difference3
+
+ggplot(people_mutated,
+       aes(x = education_binary,
+           y = monthly_housing_total)) +
+  geom_violin() +
+  theme_economist() +
+  scale_x_discrete(name = "Does the MA resident have education beyond a high school degree?",
+                   labels = c("No","Yes")) +
+  scale_y_continuous(name = "Monthly Housing Cost",
+                     breaks = seq(0,10000,by=2500),
+                     labels = c("$0","$2.5k","$5k","$7.5k","$10k")) + 
+  annotate(geom = "text", x = 1.5, y = 6000, size = 3,
+           label = paste("Difference in means\n(95% confidence):\n$",
+                         prettyNum(abs(difference3$conf.int[2]), big.mark = ",", 
+                                   digits = 3), " to $",
+                         prettyNum(abs(difference3$conf.int[1]), big.mark = ",", 
+                                   digits = 3),
+                         sep = "")) +
+  annotate(geom = "text", x = 1, y = difference3$estimate[1], size = 3,
+           label = paste("Mean (95% confidence):\n$",
+                         prettyNum(difference3$estimate[1], big.mark = ",", digits = 3))) +
+  annotate(geom = "text", x = 2, y = difference3$estimate[2], size = 3,
+           label = paste("\nMean (95% confidence):\n$",
+                         prettyNum(difference3$estimate[2], big.mark = ",", digits = 3)))
+
+
+```
+
+### Linear Regression
+
+Below I present the results of my linear regression. This model seeks to predict the relationship between monthly housing costs and mode of commute, level of educational attainment, household income, and travel time. It additionally examines how the interaction between mode of commute and travel time may affect housing costs, because I think there may be an interaction between people's travel time and mode of commute; for example, it intuitively would be much rarer for a person to choose to walk to work for 1.5 hours if they had an option of driving for 30 minutes. In this regression, mode of commute is binned into four categories which includes driving as the base case (car, truck, or van; taxi; or motorcycle); public transit; walking/biking; and other.
+
+To me, this interaction is really quite interesting. While the regression results of the transportation mode variable without the interaction indicate at the 95% confidence level that people using each of the modes of transportation (walk/bike, public transit, and other) pay a couple of hundred dollars more in housing costs per month than a person who drives (all else being equal), as travel time increases, the average person pays more if they drive a car whereas their monthly housing costs decrease if they use any of the other mode categories.
+
+This model has an R-squared value of 0.249, meaning it explains almost 25% of the variances in monthly housing costs for MA residents.
+
+The model also suggests that:
+
+1. A person with an education above a high school degree pays about $276 more in housing costs than a person with no education above a high school degree, all else being equal.
+2. For every minute increase in time spent commuting, an MA resident pays about $2.26 more in housing costs, all else being equal.
+3. The longer a person commutes using a mode other than driving, the less they tend to pay in housing costs, all else equal.
+4. And, contrary to what number 3 may suggest, using a mode other than driving to commute predicts that a person will pay more in housing costs, all else being equal.
+
+```{r linear regression, echo=F, message=F, fig.align='center'}
+options(scipen = 999)
+
+people_mutated <- people_mutated %>%
+  mutate(transpo_categories = case_when(
+    transpo_mode == "Car, truck, or van" ~ "1drive",
+    transpo_mode == "Subway or elevated" ~ "public transit",
+    transpo_mode == "Walked" ~ "walk/bike",
+    transpo_mode == "Railroad" ~ "public transit",
+    transpo_mode == "Bus or trolley bus" ~ "public transit",
+    transpo_mode == "Streetcar or trolley car (carro publico in Puerto Rico)" ~ "public transit",
+    transpo_mode == "Bicycle" ~ "walk/bike",
+    transpo_mode == "Other method" ~ "other",
+    transpo_mode == "Taxicab" ~ "1drive",
+    transpo_mode == "Ferryboat" ~ "public transit",
+    transpo_mode == "Motorcycle" ~ "1drive"))
+
+model4 <- lm(monthly_housing_total ~ transpo_categories + education_binary + household_income + travel_time + transpo_categories:travel_time, 
+            data = people_mutated)
+
+summary(model4)
+
+interact_plot(model4, 
+              pred = travel_time, 
+              modx = transpo_categories, 
+              interval = T, 
+              modx.labels = c("Drive", "Other mode", "Public Transit", "Walk or Bike"),
+              legend.main = "Mode of Transportation", colors = "CUD") +
+  scale_x_continuous(name = "Travel Time to Work (minutes)",
+                     breaks = seq(0, 150, by = 30)) +
+  scale_y_continuous(name = "Monthly Housing Costs ($)") +
+  theme()
+
+
+
+
+
+
+```
+
+## Discussion
+
+To restate my initial hypothesis, I was testing whether the shorter an MA resident's commute, the more they pay in rent; people who commute via driving tend to pay less in rent than those who use other modes; and whether there is a positive correlation between monthly income and housing costs, as well as whether any relationship exists between educational attainment and housing costs.
+
+The results of my linear regression suggest that there is a positive correlation between travel time and housing costs. For each additional minute spent commuting, an MA resident will pay on average an additional $2.26 in housing costs, holding all else equal, which does not support my hypothesis. That result is significant at the 95% confidence interval. The results of the linear regression do support the hypothesis that MA residents who drive tend to pay less in rent than those who use other modes (all else being equal), which we can say with 95% confidence. Of note, however, is that when examining the interaction between travel time and travel mode, each minute longer spent commuting tends to decrease the amount spent on housing for all modes except for driving, which increases. This suggests that, in the context of Massachusetts, residents living farther from their jobs who drive choose to pay more to live farther away; perhaps access to the larger, more expansive real estate farther from the city is the cause.
+
+If I were to investigate this further, I would like to add in a variable on urban, suburban, and rural housing to control for that (assuming real estate tends to be more expensive in the city), as well as distance from one's job, not just time spent commuting. The most glaring weakness in this analysis is the low number of variables it includes. There are so many variables which likely have an effect on housing costs; to figure out how to best improve my analysis, I would conduct background research on what these variables are. 
+
+## Conclusion
+
+This analysis is important because, as urban planners intending to improve the lives of people in a variety of communities, it is beneficial to know how the factors examined here interact with each other given that they have a relatively big impact on quality of life. Is there an ideal trade-off between time spent commuting and housing costs? Would a person appreciate less time spent in traffic if they were able to walk? Time and money are arguably two of the biggest things weighing on people's minds as they make decisions in their lives, so having an indication of what the trade-offs between them are serve to help urban planners make decisions within their communities.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
